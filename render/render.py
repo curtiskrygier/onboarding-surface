@@ -144,15 +144,21 @@ def sec_landmines(f: dict, records: dict, exposure: str) -> str:
     items: list[str] = []
     for rule in inv["boundary_rules"]:
         items.append(f"- **{rule}** *(source: lint config — verified)*")
-    for rv in hist["revert_commits"][:3]:
-        items.append(f"- git history flags: `{rv}` *(source: commit message — verify relevance)*")
     for gp in inv["go_internal_pkgs"]:
         items.append(f"- `{gp}` is a Go internal package — not importable outside its parent *(verified)*")
 
     authored = _authored(records, "landmines", fallback="")
-    if authored:
-        items.append("")
+    if authored and authored != "None extracted.":
+        if items:
+            items.append("")
         items.append(authored)
+
+    # history flags are weak signal — a footnote, and only if nothing stronger
+    flags = hist["revert_commits"][:3]
+    if flags and not authored:
+        items.append("")
+        items.append("_git history also flags (verify relevance):_ "
+                     + "; ".join(f"`{x.split(chr(32))[0]}`" for x in flags))
 
     if not items:
         srcs = "lint configs, revert history, review comments, agent docs"
