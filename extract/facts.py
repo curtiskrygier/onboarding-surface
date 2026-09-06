@@ -135,9 +135,22 @@ _ENTRY_HINTS = ("main.py", "__main__.py", "app.py", "server.py", "index.js",
 _GENERATED_DIR = re.compile(r"^(public|public-full|dist|build|generated|vendor|node_modules)/")
 
 
+# A dir with a file in one of these counts as a real code "module" downstream
+# (render's codemap table, draw's diagram boxes). Was missing .mjs/.tsx/.jsx/
+# .cjs/.kt/.c/.cpp -- a real dir whose code happened to be e.g. .mjs (mcp/,
+# a2ui-catalogue's real MCP surface) was silently invisible to `modules`
+# entirely, not just deprioritised. Deliberately excludes markup/style/data
+# extensions (.html/.css/.json/.yaml/.md) even though _LANG recognises them as
+# languages -- those are generated-site/config territory, not what this means.
+_CODE_EXT = {".py", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".go", ".rs",
+            ".rb", ".java", ".kt", ".c", ".cpp", ".gs"}
+
+
 def structure_facts(repo: Path) -> dict:
     files = _tracked_files(repo)
-    dir_counts: Counter = Counter()
+    dir_counts: Counter = Counter()      # ALL files, incl. generated -- for top_dirs
+    real_dir_counts: Counter = Counter()  # non-generated only -- for modules ranking
+    code_dirs: set[str] = set()
     lang: Counter = Counter()          # over hand-written files only
     entrypoints: list[str] = []
     generated = 0
@@ -147,19 +160,26 @@ def structure_facts(repo: Path) -> dict:
         if _GENERATED_DIR.match(f):
             generated += 1
             continue
+        real_dir_counts[top] += 1
         ext = os.path.splitext(f)[1].lower()
         if ext in _LANG:
             lang[_LANG[ext]] += 1
+        if ext in _CODE_EXT:
+            code_dirs.add(top)
         base = os.path.basename(f)
         if base in _ENTRY_HINTS or re.match(r"(cmd|bin)/[^/]+/main\.\w+$", f):
             entrypoints.append(f)
 
-    code_ext = {".py", ".js", ".ts", ".go", ".rs", ".rb", ".java", ".gs"}
-    modules = sorted(
-        d for d, _ in dir_counts.most_common()
-        if d != "(root)"
-        and any(f.startswith(d + "/") and os.path.splitext(f)[1] in code_ext for f in files)
-    )
+    # real_dir_counts.most_common() is already ranked by real (non-generated)
+    # file count -- keep that order, don't alphabetise it away. Everything
+    # downstream that truncates this list (render's codemap table, draw's box
+    # budget) should drop the SMALLEST modules first, not whichever sorts last
+    # by name -- and a directory that is ENTIRELY generated (public/, even
+    # though one vendored file inside it happens to have a code extension)
+    # must never qualify at all, which is why this checks real_dir_counts/
+    # code_dirs rather than re-scanning the full, generated-inclusive `files`.
+    modules = [d for d, _ in real_dir_counts.most_common()
+              if d != "(root)" and d in code_dirs]
     # primary = most common non-Markdown code language; Markdown only if nothing else
     code_langs = [(l, c) for l, c in lang.most_common() if l != "Markdown"]
     return {

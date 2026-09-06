@@ -1,65 +1,104 @@
-# draw — the architecture sketch (spec §16b)
+# draw — two visual jobs (spec §16b, §16c)
+
+## `architecture` — the sketch (§16b, deterministic, no LLM)
 
 `facts.json` → a structured box/edge/zone spec (built here, from facts only) →
-one `freeform_canvas`-shaped LLM call → a sanitised, cached SVG.
+[D2](https://d2lang.com) source → the `d2` CLI → a cached SVG.
 
 ```
-python3 -m draw facts.json                       # writes into the repo itself:
-                                                  #   <repo>/assets/onboarding/architecture-sketch.svg
-python3 -m draw facts.json --exposure public --out some/other/path.svg
-python3 -m draw facts.json --detail detailed --force   # ignore the input-hash cache
+python3 -m draw architecture facts.json           # -> <repo>/assets/onboarding/architecture-sketch.svg
+python3 -m draw architecture facts.json --exposure public --detail detailed --out p.svg
+python3 -m draw architecture facts.json --force   # ignore the input-hash cache
 ```
 
-## Not in the default pipeline
+Needs the `d2` CLI on `PATH` ([install](https://d2lang.com/tour/install)). No
+API key, no network call — deterministic given the same facts.
 
-An **authored artifact** — one non-deterministic LLM call, same governance class
-as `author`. `extract`/`render` never call it. Cadence only:
-`onboard.py --art`, or run `draw` directly. Never per-push, never gated.
+### Not in the default pipeline
 
-## Honesty
+Cadence only: `onboard.py --art`, or run directly. `extract`/`render` never
+call it. Not gated on cost or latency any more (no LLM call left in this
+path) — kept cadence-only by convention so a repo's diagram doesn't churn on
+every commit.
+
+### Honesty
 
 `build_diagram_spec()` builds the box list, edge list and zone grouping from
 `facts.json` alone — real module names, real declared services, real CI +
-generated-output presence, real `clone_gaps`/`sibling_repos`. The model gets
-that structure and does layout only; it is told explicitly to invent no
-additional boxes or relationships. `extract` doesn't do import/dependency
-analysis (§16a is deferred for exactly that reason), so the edges here are only
-the ones facts actually prove: containment (repo → its modules), an entrypoint
-starting the repo, CI producing a declared generated-output dir, a contributor
-needing a declared sibling repo or private path.
+generated-output presence, real `clone_gaps`/`sibling_repos`. `build_d2_source()`
+is a pure syntax translation of that spec — no content decisions of its own.
+`extract` doesn't do import/dependency analysis (§16a is deferred for exactly
+that reason), so the edges here are only the ones facts actually prove:
+containment (repo → its modules), an entrypoint starting the repo, CI
+producing a declared generated-output dir, a contributor needing a declared
+sibling repo or private path.
 
-## Exposure (§15) inherits
+### Representativeness
+
+`facts.structure.modules` is ranked by real file count, which favours large
+generic scaffolding (`tests/`, `scripts/`) over small-but-real product
+surfaces when the box budget is tight. `_rank_modules()` reorders (never
+drops) modules matching a generic-name pattern behind everything else, so
+product code wins the limited slots — verified on a2ui-catalogue, whose
+diagram used to read "apps-script-heavy, no web, no MCP" until this landed.
+
+### Exposure (§15) inherits
 
 `--exposure public` generalises any box label that would be a `private-ref`
-(reusing `render.render`'s own `_private_tokens`/`_hits_private`) **before** it
-reaches the prompt — the same "don't ask it to draw what you wouldn't write"
-rule as the prose sections.
+(reusing `render.render`'s own `_private_tokens`/`_hits_private`) **before**
+the D2 source is built.
 
-## Post-processing
-
-Raw draw-agent output is never trusted as-is: `sanitise_svg()` strips
-`<script>`/`<foreignObject>`/`<iframe>`/`<object>`/`<embed>`/`<image>`,
-event-handler attributes, non-local `href`/`xlink:href`, `<style>` tags, and a
-baked full-canvas background rect if the model drew one anyway. Never
-rewrites content — flag-and-strip only, same discipline as `render`'s leak
-scan.
-
-## Cache
+### Cache
 
 `<out>.svg` + `<out>.inputhash` sit side by side. A re-run with an unchanged
-structured input (same facts, same exposure, same detail level) is a no-op —
-`unchanged (hash …) — kept …` — so a cadence job doesn't burn a call and churn
-the image on every run. `--force` bypasses it.
+structured input is a no-op. `--force` bypasses it.
+
+### Style
+
+D2 theme 0 ("Neutral Default") — picked by comparing it side by side against
+Cool Classics and hand-drawn sketch mode on the same diagram.
+
+### Superseded
+
+The original build called a `freeform_canvas` LLM one-shot to draw the SVG
+freehand. Reverted 2026-09-06 — the model guessing box coordinates itself
+never matched a real layout engine's output, no matter how the prompt was
+tuned. `examples/a2ui-catalogue/architecture-sketch.svg` (the first hand-tuned
+test) stays in the repo as the record of what that path could do.
+
+## `mark` / `adopt-mark` — the repo mark (§16c, LLM, human-gated)
+
+Unlike the sketch, a mark *invents a metaphor* — the one thing a deterministic
+layout engine can't do. Stays LLM-driven, and stays a proposal a human must
+pick; never auto-adopted.
+
+```
+python3 -m draw mark facts.json --n 3             # -> <repo>/assets/onboarding/mark-candidates/
+python3 -m draw mark facts.json --force           # propose even if a mark already exists
+python3 -m draw adopt-mark mark-2.svg --repo <repo>   # the ONLY step that writes into a repo
+```
+
+`propose_marks()` generates N candidates in one call — genuinely distinct
+concepts, not colour/shape variations of one idea — each post-processed
+(`postprocess_mark()`: strip a baked background, tighten the viewBox to the
+real bounding box, drop redundant attrs) with a `currentColor` monochrome
+variant alongside. Writes a `manifest.json` (concept + justification per
+candidate) and stops. `has_existing_mark()` refuses to propose when the repo
+already has one (`assets/logo*`/`favicon*`, a `.github/` brand asset, or a
+logo/wordmark image in the README) unless `--force`.
+
+`adopt_mark()` is the only function in this module that writes into a repo's
+own `assets/` — always separate, explicit, human-invoked.
 
 ## Verified 2026-09-06
 
-`a2ui-catalogue.github.json`, `gemini-3.8-flash`, both exposures: one call each,
-~4–5 KB SVG, viewBox `0 0 1100 700`, 10 boxes (the overview cap), all labels
-verbatim from the spec. `internal` names `ops.py`; `public` generalises it to
-"a private/internal path" — nothing else differs. Sanitiser found nothing to
-strip in either run (the prompt's own constraints held). Cache hit confirmed
-on an identical re-run; `--force` bypassed it.
-
-**Where `render` picks it up:** `render.sec_codemap` already checks for
-`<repo>/assets/onboarding/architecture-sketch.svg` (or an authored `_has_sketch`
-flag) and embeds it — no `render` changes needed for this module to take effect.
+- `architecture`: `a2ui-catalogue`, both exposures — one `d2` compile each
+  (~350ms), viewBox auto-sized to content, all labels traced to the spec,
+  `mcp`/`renderers`/`cloud-run-renderer` correctly represented after the
+  representativeness fix. `internal` names `ops.py`; `public` says "a
+  private/internal path". Also clean on `maison` and `onboarding-surface`
+  itself (small box counts).
+- `mark`: `maison` (no existing mark) — 3 distinct house-themed concepts, all
+  post-processed correctly; `has_existing_mark()` correctly refused on
+  a2ui-catalogue and onboarding-surface (both already have one); `adopt-mark`
+  verified writing all three files into a target repo.

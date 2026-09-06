@@ -356,7 +356,7 @@ Add to §13 rubric: **No over-exposure** — in `public` mode, zero `exploitable
 or `private-ref` landmines appear verbatim in the docs; every held record and
 every residual prose leak is accounted for in `MAINTAINER-NOTES.md`.
 
-## 16. Visuals (v0.2 — §16b built 2026-09-06, §16a deferred, §16c a manual one-off)
+## 16. Visuals (v0.2 — §16b + §16c built 2026-09-06, §16a deferred)
 
 Two kinds of picture, two sources. Keep them separate.
 
@@ -367,152 +367,195 @@ only `facts.structure.modules` available it's nodes-only, and a flowchart with
 no edges doesn't earn its space. Revisit once the extractor does import/
 dependency analysis and the graph can show real relationships.
 
-### 16b. Illustrative sketch — the draw agent (freeform_canvas, one-shot) — **built**
+### 16b. Illustrative sketch — D2, deterministic — **built**
 
-**`draw/` (2026-09-06).** `facts.json` → `build_diagram_spec()` (box/edge/zone
-list, from facts only) → one `freeform_canvas`-shaped call (svg mode, own
-`{summary, justification, svg}` schema — not the atom's real validator, see
-below) → `sanitise_svg()` → a cached file.
+**`draw/` (2026-09-06, revised same day).** `facts.json` → `build_diagram_spec()`
+(box/edge/zone list, from facts only) → `build_d2_source()` (deterministic
+translation to [D2](https://d2lang.com) syntax) → the `d2` CLI → a cached SVG.
+**No LLM call in this path at all** — as deterministic as `render` itself.
 
 ```
-python3 -m draw facts.json                 # -> <repo>/assets/onboarding/architecture-sketch.svg
-python3 -m draw facts.json --exposure public --detail detailed --out p.svg
+python3 -m draw architecture facts.json     # -> <repo>/assets/onboarding/architecture-sketch.svg
+python3 -m draw architecture facts.json --exposure public --detail detailed --out p.svg
 ```
 
-Not in `extract`/`render`'s call chain — an authored artifact, cadence-only
-(`onboard.py --art`, or run directly), same governance class as `author`.
-`render.sec_codemap` already knew how to embed the result (checks
-`<repo>/assets/onboarding/architecture-sketch.svg`, or an authored
+**Superseded design, kept for the record:** the original build called a
+`freeform_canvas`-shaped LLM one-shot to draw the SVG freehand — the model
+guessing box positions itself. Curtis, on comparing the result to the original
+hand-tuned test: "did not look as professional... revisit the prompt, including
+graphic size." A prompt can be tuned indefinitely; a model laying out
+coordinates by hand will never match a real layout engine. **D2 does the
+layout deterministically from the identical spec** — no prompt to maintain, no
+canvas-size guessing (D2 sizes the SVG to its own content), no chance of an
+invented relationship. `examples/a2ui-catalogue/architecture-sketch.svg` (the
+very first hand-tuned test, 800×520, cramped) and the intermediate
+freeform_canvas pass both stay in the repo as the record of why this landed
+where it did.
+
+Not in `extract`/`render`'s call chain — cadence-only (`onboard.py --art`, or
+run directly). `render.sec_codemap` already knew how to embed the result
+(checks `<repo>/assets/onboarding/architecture-sketch.svg`, or an authored
 `_has_sketch` flag) — no `render` change was needed.
 
-**Honesty.** `build_diagram_spec()` is deterministic code, not a prompt: it
-builds boxes/edges from `facts.structure.modules`, `facts.structure.entrypoints`,
-`facts.run.services`, `facts.activity.ci_present` + `generated_file_count`,
-`facts.clone_gaps`/`sibling_repos` — nothing else. The model does layout only,
-told explicitly to invent no additional box or relationship. Since §16a is
-deferred (no import-graph analysis), the only edges drawn are the ones facts
-actually prove: containment (repo → its modules), an entrypoint starting the
-repo, CI producing a declared generated-output dir, a contributor needing a
-declared sibling repo or private path — never an inferred dependency.
+**Honesty.** `build_diagram_spec()` builds boxes/edges from
+`facts.structure.modules`, `facts.structure.entrypoints`, `facts.run.services`,
+`facts.activity.ci_present` + `generated_file_count`, `facts.clone_gaps`/
+`sibling_repos` — nothing else, and `build_d2_source()` is a pure syntax
+translation of that spec, no content decisions. Since §16a is deferred (no
+import-graph analysis), the only edges drawn are the ones facts actually
+prove: containment (repo → its modules), an entrypoint starting the repo, CI
+producing a declared generated-output dir, a contributor needing a declared
+sibling repo or private path — never an inferred dependency.
 
-**Exposure (§15) inherits at the spec-building step, before the prompt is
-built** — reuses `render.render`'s own `_private_tokens`/`_hits_private` to
-generalise a box label (e.g. `ops.py` → "a private/internal path") before the
-model ever sees it. Verified: internal names the real path; public doesn't;
-nothing else in the diagram differs.
+**Representativeness bug, found and fixed 2026-09-06.** Curtis, on the first
+real D2 render: "not sure the diagram properly represented the codebase - bit
+gas heavy, no web, mcp apps etc." Two real bugs, not a D2 problem:
+1. `extract`'s own `modules` list had drifted from `_LANG`'s extension set
+   (missing `.mjs`/`.tsx`/`.jsx`/`.cjs`/`.kt`/`.c`/`.cpp`) — a2ui-catalogue's
+   real MCP surface (`mcp/`, all `.mjs`) was invisible to `modules` entirely,
+   not just deprioritised. Fixed, and while there: a directory entirely inside
+   a `_GENERATED_DIR` (`public/`) could still qualify as a "module" via one
+   stray vendored file with a code extension nested inside it — `public/`
+   (1201 generated files) was ranking as the #1 "module" once size-ranking
+   replaced alphabetising (next bug). Both fixed together in `structure_facts`.
+2. `modules` was sorted alphabetically for storage, throwing away the real
+   file-count ranking `dir_counts.most_common()` had already computed —
+   whatever truncates this list (this diagram's box budget, `render`'s codemap
+   table) was effectively picking the first N alphabetically, not the N most
+   substantial. Fixed: `modules` now stays ranked by real (non-generated) file
+   count.
+3. Even with real ranking, generic scaffolding (`tests/`, `scripts/`,
+   `knowledge-catalogue/`) still outranks small-but-real product surfaces by
+   raw file count. `draw._rank_modules()` reorders (doesn't drop) modules
+   matching a generic-name pattern (tests/scripts/examples/docs/spec/vendors/
+   benchmarks/etc.) behind everything else, so product code wins the limited
+   box budget. Verified: a2ui-catalogue's diagram now shows `apps-script-surface`,
+   `renderers`, `components`, `mcp`, `a2a_counterpart`, `cloud-run-renderer` —
+   not `tests`/`scripts`/`knowledge-catalogue`.
 
-**Post-processing never trusted-as-is:** `sanitise_svg()` strips
-`<script>`/`<foreignObject>`/`<iframe>`/`<object>`/`<embed>`/`<image>`,
-event-handler attributes, non-local `href`/`xlink:href`, `<style>`, and a baked
-full-canvas background rect if the model drew one despite the prompt telling it
-not to. Flag-and-strip only, matching `render`'s own leak-scan discipline —
-never rewrites content.
+**Exposure (§15) inherits at the spec-building step**, before any rendering
+happens — reuses `render.render`'s own `_private_tokens`/`_hits_private` to
+generalise a box label (e.g. `ops.py` → "a private/internal path"). Verified:
+internal names the real path; public doesn't; nothing else in the diagram
+differs.
 
 **Cache:** `<out>.svg` + `<out>.inputhash` side by side; an unchanged
-structured input (same facts/exposure/detail) is a no-op; `--force` bypasses it.
+structured input is a no-op; `--force` bypasses it.
 
-**Verified 2026-09-06** (`a2ui-catalogue.github.json`, `gemini-3.8-flash`, both
-exposures): one call each, ~4–5 KB SVG, `viewBox 0 0 1100 700`, 10 boxes (the
-overview cap), zones visually separated with band titles, all labels traced
-directly back to the spec — a real improvement on the original hand-rolled test
-below, once the prompt got the generous-canvas + banded-zones guidance that test
-surfaced. Cache hit + `--force` bypass both confirmed.
+**Style:** D2 theme 0 ("Neutral Default") — Curtis's pick, compared side by
+side against Cool Classics and hand-drawn sketch mode on the same diagram.
 
-**Superseded first pass, kept for the record:** the original one-off test on
-the same facts, `examples/a2ui-catalogue/architecture-sketch.svg` — one call,
-~6 KB SVG, `render_diagram_response` → `accepted: True`, 10 boxes/10
-connectors, all labels verbatim. **Usable but cramped** — 800×520 for 10 boxes,
-10.5px text, zones not visually separated, dead space between them. Exactly the
-gaps the `draw/` prompt guidance below (generous canvas, banded zones) was
-written to close.
-
-**Prompt guidance** (the draw agent gets this, built by onboarding-surface):
-
-- **Structured input, not prose.** Pass the box list, edge list (with relation
-  labels), and zone grouping from `facts.json`. The model does *layout*; it does
-  not invent content. This also keeps the exposure filter (§15) clean — the label
-  strings are yours.
-- **Generous canvas:** `viewBox 0 0 1100 700`, boxes ≥ 160×64, text ≥ 12px. A box
-  needing >3 lines gets bigger, not smaller text.
-- **Zones:** each distinct flow in its own horizontal band with a faint
-  background rect + a band title; clear whitespace between bands; bridge them with
-  a labelled connector (no dead space).
-- **Direction per zone:** build/author flows top→bottom, runtime/request flows
-  left→right.
-- **Label the arrows** where the relation isn't obvious ("generates", "deployed
-  by CI", "emits").
-- **Detail knob:** `overview` (≤10 boxes, the shape — default) or `detailed`
-  (expand key nodes: renderer variants, generated artifacts, CI, private tier —
-  use for ARCHITECTURE.md).
-- One accent colour for the entry node; legend only if >2 fills.
+**Verified 2026-09-06** (`a2ui-catalogue`, both exposures, after both the D2
+switch and the representativeness fix): one `d2` compile each (~350ms, no
+network), viewBox auto-sized to content (`0 0 1366 672` for this repo's real
+box count — no more picking a canvas size and hoping it fits), all labels
+traced directly back to the spec, no dead space, zones as real D2 containers.
+Also verified on `maison` and `onboarding-surface` itself (small/degenerate
+box counts) — both render cleanly.
 
 **Pipeline placement — as built:**
 
-- An `authored` artifact, cadence only — `onboard.py --art` (or `python3 -m
-  draw` directly), never wired into `extract`/`render`'s own call chain, never
-  per-push, never gated.
-- Prompt built from `facts.json`, in `draw.build_diagram_spec()` — deterministic
-  code, not the model. §16a's Mermaid pairing (below the sketch) stays deferred
-  along with §16a itself — nothing to keep in sync with yet.
+- Cadence-only by convention — `onboard.py --art` (or `python3 -m draw
+  architecture` directly), never wired into `extract`/`render`'s own call
+  chain, never per-push, never gated. (No longer LLM-driven, so nothing here
+  strictly *requires* cadence-only for cost/latency reasons — kept anyway so a
+  repo's diagram doesn't churn on every commit.)
+- Spec built from `facts.json` in `draw.build_diagram_spec()`; D2 source built
+  in `draw.build_d2_source()` — both deterministic code, no model involved.
 - Cache: `<out>.svg` + `<out>.inputhash`; unchanged input → no-op; `--force`
   bypasses it.
-- Exposure inherits (§15) at spec-build time, not prompt time: a box that would
-  carry a `private-ref` label is generalised before the prompt is built at all.
-- Model: `gemini-3.8-flash` (`draw.MODEL`) — laid out cleanly in every test run.
+- Exposure inherits (§15) at spec-build time: a box that would carry a
+  `private-ref` label is generalised before D2 source is even built.
+- Requires the `d2` CLI on `PATH` (`d2lang.com`) — `render_d2()` raises a clear
+  `D2Error` if it's missing, never a bare `FileNotFoundError`.
 
 **Where it lands:**
 
-- **`ARCHITECTURE.md`, not `README.md`.** A marketing README's visual should be
-  a product shot (the rendered UI the tool produces), not an internal diagram —
-  those read as "enterprise vendor" on a landing page. `ARCHITECTURE.md` is the
-  reader who wants it: someone about to change code. `render.sec_codemap`
-  embeds it at the top of the codemap section, above the module table.
-- The sketch's labels pass the same `public` / `internal` exposure filter (§15)
-  as the prose — verified: an `internal` sketch names `ops.py`; a `public` one
-  says "a private/internal path". Nothing else in the diagram differs.
-- v2 interactive A2UI surface: an `agent_sketchpad` / `freeform_canvas` atom
-  pre-loaded with the SVG.
+- **`ARCHITECTURE.md`, not `README.md`.** A marketing README's visual should
+  be a product shot (the rendered UI the tool produces), not an internal
+  diagram — those read as "enterprise vendor" on a landing page.
+  `ARCHITECTURE.md` is the reader who wants it: someone about to change code.
+  `render.sec_codemap` embeds it at the top of the codemap section, above the
+  module table.
+- The sketch's labels pass the same `public` / `internal` exposure filter
+  (§15) as the prose.
+- v2 interactive A2UI surface: an `agent_sketchpad` atom pre-loaded with the SVG.
 
-### 16c. Repo mark — the draw agent (concept, not layout)
+### 16c. Repo mark — the draw agent (freeform_canvas) — **built**
 
-When a repo has **no existing mark** (`facts.docs`: no logo/wordmark image in the
-README, no `assets/logo*`, no `.github/` brand asset, no `favicon.svg`), the
-agent can *propose* a minimal geometric mark — same draw path
-(`freeform_canvas`, one-shot), different job.
+**`draw/` (2026-09-06).** When a repo has **no existing mark**
+(`draw.has_existing_mark()`: no `assets/logo*`/`assets/favicon*`, no `.github/`
+brand asset, no logo/wordmark/brand image referenced in the README), the agent
+can *propose* a minimal geometric mark.
 
-**How it differs from 16b — and why it needs a human:**
+```
+python3 -m draw mark facts.json --n 3            # -> <repo>/assets/onboarding/mark-candidates/
+python3 -m draw adopt-mark mark-2.svg --repo <repo>   # the ONLY step that writes into the repo
+```
 
-- 16b lays out *known* boxes from `facts.json`. 16c *invents a metaphor*. That's
-  the shakiest thing a one-shot generator does — tested 2026-09-06 for
-  `onboarding-surface`: two concepts, one read as "a chromosome", one landed.
-- So this is a **proposal artifact, never auto-adopted.** The agent generates
-  **2–3 candidate concepts** in one `--brand` invocation, the human picks (or
-  asks for a revision / a new direction). Not in the CI loop; a logo has a
-  one-time lifecycle, not a cadence.
+**How it differs from 16b, and why it still needs a human (unlike 16b, which
+no longer does):** 16b lays out *known* boxes from `facts.json` — that's why
+D2, a real layout engine with no creative decisions to make, was the right
+fix. 16c *invents a metaphor* — the shakiest thing a one-shot generator does,
+confirmed live 2026-09-06 for `onboarding-surface` itself: two concepts, one
+read as "a chromosome", one landed. There's no deterministic substitute for
+"invent a visual idea", so this path stays LLM-driven and human-gated.
+
+- **A proposal artifact, never auto-adopted.** `propose_marks()` generates
+  **N candidates** (default 3) in one call, each a genuinely distinct visual
+  metaphor (not colour/shape variations of one idea) — writes them to a
+  `mark-candidates/` dir with a `manifest.json` (concept + justification per
+  candidate) and stops. Nothing writes into the repo's own `assets/` except
+  `adopt_mark()`, a separate, explicit, human-invoked step. Not in the CI loop
+  — a logo has a one-time lifecycle, not a cadence.
+- **Guarded by `has_existing_mark()`** — refuses to propose (needs `--force`)
+  when the repo already has a mark. Verified: correctly refuses on
+  a2ui-catalogue (README wordmark image) and onboarding-surface itself
+  (`assets/logo.svg`); correctly proceeds on `maison` (no mark).
 - **Exposure (§15) doesn't apply** — an abstract mark carries no `private-ref`
-  risk.
+  risk. `build_mark_seed()` still only uses real `facts.repo` fields (name,
+  description, topics, `repo_kind`) — no invention on the input side either.
 
 **Prompt:** minimal-geometric-mark constraints (`viewBox 0 0 240 240`,
 transparent, ≤ 5 shapes, one accent colour, NO TEXT, flat, centred, generous
-margin) + a concept seed from `facts.repo`: name, description, topics,
-`repo_kind`. Ask for distinct concepts, not variations of one.
+margin) + the concept seed. Higher temperature (0.9) than 16b's old prompt
+(0.4) — here variety across candidates is the point, not fidelity to a fixed
+input.
 
-**Post-processing (deterministic, shared with 16b).** Raw draw output needs SVG
-surgery before it's usable:
+**Post-processing (`postprocess_mark()`, shares `sanitise_svg()`'s dangerous-tag
+stripping with 16b's old path).** Raw draw output needs SVG surgery before it's
+usable:
 
-1. strip the baked background `<rect width=… fill="#fff"/>`
-2. tighten `viewBox` to the artwork bounding box + even padding (~24 units)
-3. drop redundant attrs (`ry` alongside `rx`, `width`/`height` on the root)
+1. strip the baked background rect (`_strip_full_canvas_bg_rect()` — sized to
+   the SVG's own viewBox, not hardcoded, so it works for both 16b's old fixed
+   canvas and 16c's tight one)
+2. tighten `viewBox` to the artwork's real bounding box + even padding (~24
+   units) — `_svg_bbox()` is attribute-aware (rect/circle/ellipse/line/
+   polyline/polygon/path), not a blind number scan
+3. drop redundant attrs (`ry` alongside an equal `rx`, `width`/`height` on the
+   root once `viewBox` is set)
 4. emit a `currentColor` monochrome variant alongside the colour one
+   (`to_monochrome()`) — verified: every real fill/stroke colour swapped,
+   `none`/`transparent` left alone
 
-**Where it lands (on a pick):** `assets/logo.svg` + `assets/favicon.svg`; a
-modest `<img … width="56–64">` above the README title; available for a
-wordmark lockup. Never a hero.
+**Verified 2026-09-06** (`maison`, no existing mark): one call, 3 candidates
+("Gabled Keystone Arch", "Isometric Spatial Cube", "Sheltered Core" — genuinely
+distinct metaphors, all house-themed per the real concept seed), each
+post-processed cleanly (tight viewBox, no root width/height, mono variant
+correct), `adopt-mark` verified writing `logo.svg` + `favicon.svg` +
+`logo-mono.svg` into a target repo's `assets/`.
 
-### 16d. Both visual jobs are A2A delegations
+**Where it lands (on a pick):** `assets/logo.svg` + `assets/favicon.svg` +
+`assets/logo-mono.svg`; a modest `<img … width="56–64">` above the README
+title; available for a wordmark lockup. Never a hero.
 
-16b and 16c are the onboarding-surface agent calling the **draw agent** over
-A2A — a specialist it doesn't reimplement. Two clean two-agent flows for the
+### 16d. Both visual jobs are A2A delegations (16c today; 16b once `serve` exists)
+
+16c is the onboarding-surface agent calling the **draw agent** over A2A — a
+specialist it doesn't reimplement, exactly as designed. 16b no longer calls an
+LLM at all (D2, deterministic), so it isn't a draw-agent delegation any more —
+it's local orchestration of a real diagram-layout tool, the same class of work
+as `render` itself. Still a candidate for its own two-agent flow in the
 `agentic-battle-testing` Agents inventory. The governed prose call (§10) is the
 third delegation. The onboarding-surface agent's own job is deterministic
 extraction + orchestration + post-processing; it draws nothing and writes no

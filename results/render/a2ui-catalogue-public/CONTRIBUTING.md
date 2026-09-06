@@ -6,8 +6,9 @@ Resolve parser parity between `scripts/parse_training_md.py` and Apps Script cou
 
 <!-- onboarding-surface:begin pr-gates -->
 - CI must pass — `.github/workflows/`: build-apps.yml, deploy.yml, gemini-review.yml, release-renderer.yml.
+- Commit-message convention: house style: commits carry a Co-Authored-By trailer; subjects end with a (#NN) PR reference.
 
-Not found (so not required): CLA/DCO, a commit convention, a PR template.
+Not found (so not required): CLA/DCO, a PR template.
 <!-- onboarding-surface:end pr-gates -->
 
 <!-- onboarding-surface:begin verify -->

@@ -1,5 +1,5 @@
 {
-  "_generated_at": "2026-09-06T14:21:15+00:00",
+  "_generated_at": "2026-09-06T16:44:16+00:00",
   "_repo_path": "/home/curtis/gemini/a2ui-catalogue",
   "_github": true,
   "repo": {
@@ -95,21 +95,22 @@
       "cloud-run-renderer/server.py"
     ],
     "modules": [
-      "a2a_counterpart",
       "apps-script-surface",
-      "benchmarks",
-      "cloud-run-renderer",
-      "components",
-      "examples",
-      "googlechat",
-      "knowledge-catalogue",
-      "molecules",
-      "renderers",
-      "scripts",
-      "spec",
-      "src",
       "tests",
-      "tests-js"
+      "scripts",
+      "knowledge-catalogue",
+      "renderers",
+      "components",
+      "mcp",
+      "examples",
+      "spec",
+      "a2a_counterpart",
+      "cloud-run-renderer",
+      "molecules",
+      "benchmarks",
+      "tests-js",
+      "googlechat",
+      "src"
     ]
   },
   "run": {
@@ -132,18 +133,7 @@
   },
   "history": {
     "revert_commits": [
-      "28c95836 Refresh stale generated agent-facing docs (#52)",
-      "d1e48a3d Add orphaned-component-update warning (Gemini's DX recommendation on agent_sketchpad)",
-      "f167f7eb Add agent_sketchpad: a new real catalogue atom for progressive multi-stroke drawing over real streaming updates",
-      "76d32b59 Add Topic C, Phase 5.3: map updateComponents text to TextMessageStart/Content/End",
-      "f9127af7 Add Topic C, Phase 5.1-5.2: package agui_adapter.py, map updateDataModel -> StateDelta",
-      "54b11217 Add Topic C, Phases 3-4: render derived state to HTML, then feed a real AG-UI live-atoms runtime from real A2A traffic",
-      "cffb235b Add Topic C, Phase 2: expose derived surface state back over A2A (local only)",
-      "47ab2493 Add Topic C, Phase 1: real multi-turn derived state over A2A (local only)",
-      "07975c10 Add mcp-apps renderer for freeform_canvas (#34)",
-      "ac0ee037 Fix GAS-side createSurface decode/render drift (Topic A)",
-      "37bee5c5 Add real jsonschema conformance tests against the current A2UI v1.0 spec",
-      "f1c81ba5 photo_grid/photo_stepper: no broken-image icon when a candidate has no photo"
+      "a2h-printer: close round-2 roast-panel findings \u2014 isolated rate-limit buckets per route group, CI regression tests for both, deploy-guard clarity, copilotkit LICENSE co-location"
     ],
     "churn_by_dir": {
       "a2h-printer": 150,
@@ -165,7 +155,7 @@
     "has_contributing_md": false,
     "cla": false,
     "dco": false,
-    "commit_convention": null,
+    "commit_convention": "house style: commits carry a Co-Authored-By trailer; subjects end with a (#NN) PR reference",
     "pr_template_fields": null,
     "branch_rules": "no branch protection on the default branch",
     "required_checks": null
@@ -208,11 +198,6 @@
     },
     {
       "path": "clasp.json",
-      "in": "CLAUDE.md",
-      "why": "absent"
-    },
-    {
-      "path": "tools/list",
       "in": "CLAUDE.md",
       "why": "absent"
     },
