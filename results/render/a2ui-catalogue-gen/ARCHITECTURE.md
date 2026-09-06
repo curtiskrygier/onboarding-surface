@@ -1,20 +1,6 @@
 # Architecture
 
 <!-- onboarding-surface:begin codemap -->
-```mermaid
-flowchart TD
-  a2a_counterpart["a2a_counterpart/"]
-  apps_script_surface["apps-script-surface/"]
-  benchmarks["benchmarks/"]
-  cloud_run_renderer["cloud-run-renderer/"]
-  components["components/"]
-  examples["examples/"]
-  googlechat["googlechat/"]
-  knowledge_catalogue["knowledge-catalogue/"]
-  a2a_counterpart_main_py(["a2a_counterpart/main.py"])
-  cloud_run_renderer_server_py(["cloud-run-renderer/server.py"])
-```
-
 | module | what it does | grep for |
 | --- | --- | --- |
 | a2a_counterpart | Agent-to-Agent counterpart server implementation | grep `a2a_counterpart` |

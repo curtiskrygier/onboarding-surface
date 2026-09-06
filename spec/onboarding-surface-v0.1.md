@@ -320,12 +320,12 @@ or `private-ref` landmines appear verbatim.
 
 Two kinds of picture, two sources. Keep them separate.
 
-### 16a. Deterministic diagrams — Mermaid
+### 16a. Deterministic diagrams — Mermaid *(deferred)*
 
-A module graph and the dynamic path (entry → handler → store), emitted as
-**Mermaid** from `facts.json`. GitHub renders it inline; it regenerates on the
-CI-formatter cadence like any other deterministic block. This is the *reliable*
-picture — the one that has to be exact.
+A module graph from `facts.json` as Mermaid was prototyped and pulled: with
+only `facts.structure.modules` available it's nodes-only, and a flowchart with
+no edges doesn't earn its space. Revisit once the extractor does import/
+dependency analysis and the graph can show real relationships.
 
 ### 16b. Illustrative sketch — the draw agent (freeform_canvas, one-shot)
 

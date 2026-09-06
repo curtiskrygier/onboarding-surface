@@ -116,19 +116,12 @@ def sec_run_it(f: dict, records: dict) -> str:
 def sec_codemap(f: dict, records: dict, exposure: str) -> str:
     s = f["structure"]
     out = []
+    # §16b architecture sketch (draw agent) if present. §16a Mermaid module graph
+    # is deferred until it can show real dependency edges — a nodes-only flowchart
+    # isn't worth the space.
     if (Path(f["_repo_path"]) / "assets/onboarding/architecture-sketch.svg").exists() or \
        records.get("_has_sketch"):
         out.append("![Architecture sketch](assets/onboarding/architecture-sketch.svg)\n")
-    # Mermaid module graph from facts (deterministic)
-    mm = ["```mermaid", "flowchart TD"]
-    ents = s["entrypoints"][:3]
-    for m in s["modules"][:8]:
-        mm.append(f'  {re.sub(r"[^a-zA-Z0-9]", "_", m)}["{m}/"]')
-    for e in ents:
-        mm.append(f'  {re.sub(r"[^a-zA-Z0-9]", "_", e)}(["{e}"])')
-    mm.append("```")
-    out.append("\n".join(mm))
-    out.append("")
     authored_map = _authored(records, "codemap", fallback="")
     if authored_map:
         out.append(authored_map)
