@@ -395,3 +395,48 @@ Artifact: `examples/a2ui-catalogue/architecture-sketch.svg`.
 
 Split rule: **Mermaid where the picture *is* the facts; the draw agent where the
 picture is there to make the page inviting.**
+
+### 16c. Repo mark — the draw agent (concept, not layout)
+
+When a repo has **no existing mark** (`facts.docs`: no logo/wordmark image in the
+README, no `assets/logo*`, no `.github/` brand asset, no `favicon.svg`), the
+agent can *propose* a minimal geometric mark — same draw path
+(`freeform_canvas`, one-shot), different job.
+
+**How it differs from 16b — and why it needs a human:**
+
+- 16b lays out *known* boxes from `facts.json`. 16c *invents a metaphor*. That's
+  the shakiest thing a one-shot generator does — tested 2026-09-06 for
+  `onboarding-surface`: two concepts, one read as "a chromosome", one landed.
+- So this is a **proposal artifact, never auto-adopted.** The agent generates
+  **2–3 candidate concepts** in one `--brand` invocation, the human picks (or
+  asks for a revision / a new direction). Not in the CI loop; a logo has a
+  one-time lifecycle, not a cadence.
+- **Exposure (§15) doesn't apply** — an abstract mark carries no `private-ref`
+  risk.
+
+**Prompt:** minimal-geometric-mark constraints (`viewBox 0 0 240 240`,
+transparent, ≤ 5 shapes, one accent colour, NO TEXT, flat, centred, generous
+margin) + a concept seed from `facts.repo`: name, description, topics,
+`repo_kind`. Ask for distinct concepts, not variations of one.
+
+**Post-processing (deterministic, shared with 16b).** Raw draw output needs SVG
+surgery before it's usable:
+
+1. strip the baked background `<rect width=… fill="#fff"/>`
+2. tighten `viewBox` to the artwork bounding box + even padding (~24 units)
+3. drop redundant attrs (`ry` alongside `rx`, `width`/`height` on the root)
+4. emit a `currentColor` monochrome variant alongside the colour one
+
+**Where it lands (on a pick):** `assets/logo.svg` + `assets/favicon.svg`; a
+modest `<img … width="56–64">` above the README title; available for a
+wordmark lockup. Never a hero.
+
+### 16d. Both visual jobs are A2A delegations
+
+16b and 16c are the onboarding-surface agent calling the **draw agent** over
+A2A — a specialist it doesn't reimplement. Two clean two-agent flows for the
+`agentic-battle-testing` Agents inventory. The governed prose call (§10) is the
+third delegation. The onboarding-surface agent's own job is deterministic
+extraction + orchestration + post-processing; it draws nothing and writes no
+prose itself.
