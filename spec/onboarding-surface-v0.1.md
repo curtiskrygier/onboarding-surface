@@ -356,7 +356,7 @@ Add to §13 rubric: **No over-exposure** — in `public` mode, zero `exploitable
 or `private-ref` landmines appear verbatim in the docs; every held record and
 every residual prose leak is accounted for in `MAINTAINER-NOTES.md`.
 
-## 16. Visuals (v0.2 candidate — tested 2026-09-06)
+## 16. Visuals (v0.2 — §16b built 2026-09-06, §16a deferred, §16c a manual one-off)
 
 Two kinds of picture, two sources. Keep them separate.
 
@@ -367,19 +367,64 @@ only `facts.structure.modules` available it's nodes-only, and a flowchart with
 no edges doesn't earn its space. Revisit once the extractor does import/
 dependency analysis and the graph can show real relationships.
 
-### 16b. Illustrative sketch — the draw agent (freeform_canvas, one-shot)
+### 16b. Illustrative sketch — the draw agent (freeform_canvas, one-shot) — **built**
 
-An architecture sketch and/or a hero visual via the **draw agent**, using the
-**non-progressive `freeform_canvas` path** (`generate_diagram_payload(prompt,
-mode="svg")`), not the streaming `/a2a/sketch` stroke path — one structured LLM
-call, returns a finished sanitised SVG string, passes the atom's own validator.
+**`draw/` (2026-09-06).** `facts.json` → `build_diagram_spec()` (box/edge/zone
+list, from facts only) → one `freeform_canvas`-shaped call (svg mode, own
+`{summary, justification, svg}` schema — not the atom's real validator, see
+below) → `sanitise_svg()` → a cached file.
 
-**Tested 2026-09-06** on a2ui-catalogue's real codemap facts, `gemini-3.8-flash`:
-one call, ~6 KB SVG, `render_diagram_response` → `accepted: True`; 10 boxes, 10
-connectors, all labels verbatim from the facts, correct two-zone layout (build
-flow top-to-bottom, runtime flow left-to-right). **Usable, but cramped** — 800×520
-for 10 boxes, 10.5px text, zones not visually separated, dead space between them.
-Artifact: `examples/a2ui-catalogue/architecture-sketch.svg`.
+```
+python3 -m draw facts.json                 # -> <repo>/assets/onboarding/architecture-sketch.svg
+python3 -m draw facts.json --exposure public --detail detailed --out p.svg
+```
+
+Not in `extract`/`render`'s call chain — an authored artifact, cadence-only
+(`onboard.py --art`, or run directly), same governance class as `author`.
+`render.sec_codemap` already knew how to embed the result (checks
+`<repo>/assets/onboarding/architecture-sketch.svg`, or an authored
+`_has_sketch` flag) — no `render` change was needed.
+
+**Honesty.** `build_diagram_spec()` is deterministic code, not a prompt: it
+builds boxes/edges from `facts.structure.modules`, `facts.structure.entrypoints`,
+`facts.run.services`, `facts.activity.ci_present` + `generated_file_count`,
+`facts.clone_gaps`/`sibling_repos` — nothing else. The model does layout only,
+told explicitly to invent no additional box or relationship. Since §16a is
+deferred (no import-graph analysis), the only edges drawn are the ones facts
+actually prove: containment (repo → its modules), an entrypoint starting the
+repo, CI producing a declared generated-output dir, a contributor needing a
+declared sibling repo or private path — never an inferred dependency.
+
+**Exposure (§15) inherits at the spec-building step, before the prompt is
+built** — reuses `render.render`'s own `_private_tokens`/`_hits_private` to
+generalise a box label (e.g. `ops.py` → "a private/internal path") before the
+model ever sees it. Verified: internal names the real path; public doesn't;
+nothing else in the diagram differs.
+
+**Post-processing never trusted-as-is:** `sanitise_svg()` strips
+`<script>`/`<foreignObject>`/`<iframe>`/`<object>`/`<embed>`/`<image>`,
+event-handler attributes, non-local `href`/`xlink:href`, `<style>`, and a baked
+full-canvas background rect if the model drew one despite the prompt telling it
+not to. Flag-and-strip only, matching `render`'s own leak-scan discipline —
+never rewrites content.
+
+**Cache:** `<out>.svg` + `<out>.inputhash` side by side; an unchanged
+structured input (same facts/exposure/detail) is a no-op; `--force` bypasses it.
+
+**Verified 2026-09-06** (`a2ui-catalogue.github.json`, `gemini-3.8-flash`, both
+exposures): one call each, ~4–5 KB SVG, `viewBox 0 0 1100 700`, 10 boxes (the
+overview cap), zones visually separated with band titles, all labels traced
+directly back to the spec — a real improvement on the original hand-rolled test
+below, once the prompt got the generous-canvas + banded-zones guidance that test
+surfaced. Cache hit + `--force` bypass both confirmed.
+
+**Superseded first pass, kept for the record:** the original one-off test on
+the same facts, `examples/a2ui-catalogue/architecture-sketch.svg` — one call,
+~6 KB SVG, `render_diagram_response` → `accepted: True`, 10 boxes/10
+connectors, all labels verbatim. **Usable but cramped** — 800×520 for 10 boxes,
+10.5px text, zones not visually separated, dead space between them. Exactly the
+gaps the `draw/` prompt guidance below (generous canvas, banded zones) was
+written to close.
 
 **Prompt guidance** (the draw agent gets this, built by onboarding-surface):
 
@@ -401,40 +446,32 @@ Artifact: `examples/a2ui-catalogue/architecture-sketch.svg`.
   use for ARCHITECTURE.md).
 - One accent colour for the entry node; legend only if >2 fills.
 
-**Pipeline placement:**
+**Pipeline placement — as built:**
 
-- An `authored` artifact — LLM output, non-deterministic. Cadence only
-  (merge / label / cron), never per-push, never gated. `mode=check` / `mode=full`
-  don't call it; a `render_art` flag does.
-- **Prompt built from `facts.json`** — the codemap modules + dynamic path. The
-  facts drive both the Mermaid and the sketch, so they can't disagree.
-- **Cache** `art/<name>.svg` + `art/<name>.inputhash`; redraw only when the
-  hash changes materially — otherwise every cadence run burns a call and churns
-  the image.
-- **Exposure inherits** (§15): a box that would carry a `private-ref` label →
-  generalise the *prompt* in `public` mode. Don't ask it to draw what you
-  wouldn't write.
-- **Model:** `freeform_canvas` defaults to `gemini-3.7-flash`; the test used
-  `3.8-flash` and it laid out cleanly. That's the draw service's config to set,
-  not this agent's concern.
+- An `authored` artifact, cadence only — `onboard.py --art` (or `python3 -m
+  draw` directly), never wired into `extract`/`render`'s own call chain, never
+  per-push, never gated.
+- Prompt built from `facts.json`, in `draw.build_diagram_spec()` — deterministic
+  code, not the model. §16a's Mermaid pairing (below the sketch) stays deferred
+  along with §16a itself — nothing to keep in sync with yet.
+- Cache: `<out>.svg` + `<out>.inputhash`; unchanged input → no-op; `--force`
+  bypasses it.
+- Exposure inherits (§15) at spec-build time, not prompt time: a box that would
+  carry a `private-ref` label is generalised before the prompt is built at all.
+- Model: `gemini-3.8-flash` (`draw.MODEL`) — laid out cleanly in every test run.
 
 **Where it lands:**
 
-- **`ARCHITECTURE.md`, not `README.md`.** A marketing README's visual should be a
-  product shot (the rendered UI the tool produces), not an internal diagram —
+- **`ARCHITECTURE.md`, not `README.md`.** A marketing README's visual should be
+  a product shot (the rendered UI the tool produces), not an internal diagram —
   those read as "enterprise vendor" on a landing page. `ARCHITECTURE.md` is the
-  reader who wants it: someone about to change code.
-- Embed as `![](assets/onboarding/architecture-sketch.svg)` at the top of §5
-  "The map", with the **Mermaid module-graph directly below it**: sketch for
-  orientation, Mermaid for the precise reference.
+  reader who wants it: someone about to change code. `render.sec_codemap`
+  embeds it at the top of the codemap section, above the module table.
 - The sketch's labels pass the same `public` / `internal` exposure filter (§15)
-  as the prose — an `internal` sketch may label `ops/ (private tier)`; a `public`
-  one may not.
+  as the prose — verified: an `internal` sketch names `ops.py`; a `public` one
+  says "a private/internal path". Nothing else in the diagram differs.
 - v2 interactive A2UI surface: an `agent_sketchpad` / `freeform_canvas` atom
   pre-loaded with the SVG.
-
-Split rule: **Mermaid where the picture *is* the facts; the draw agent where the
-picture is there to make the page inviting.**
 
 ### 16c. Repo mark — the draw agent (concept, not layout)
 
