@@ -50,8 +50,22 @@ dependency). What it surfaced:
    *judgement* — the extractor can't produce it. Accept that §7's "a well-scoped
    first change" line is authored-from-the-codemap, not derivable.
 
+6. **The surface over-shares on a public repo.** The landmines section amplifies
+   candour that was buried in `CLAUDE.md` into a front-and-centre
+   `ARCHITECTURE.md`, names the private sibling repo and its files, and describes
+   a silent-failure mode. Contributor-honest, adopter-alarming, competitor-useful.
+   → drove spec §15's `exposure: internal|public` mode + the
+   `operational|exploitable|private-ref` landmine class. See
+   `landmines-exposure-demo.md` for the 11 real landmines run through `public`.
+
 ## Verdict
 
-The spec survives a hard repo. The three biggest v0.2 changes are `clone_gaps`,
-`repo_kind`, and `sibling_repos` — all deterministic facts the extractor can
-produce, all things that would otherwise make the surface quietly wrong.
+The spec survives a hard repo. The `README.md` / `ARCHITECTURE.md` /
+`CONTRIBUTING.md` here are the `exposure: internal` rendering (full candour —
+correct for a private worked example). `landmines-exposure-demo.md` shows the
+`public` rendering.
+
+Biggest v0.2 changes, all now in spec §15: `clone_gaps`, `repo_kind`,
+`sibling_repos` (deterministic facts that otherwise make the surface quietly
+wrong), config-file prose as a landmines source, and the `exposure` mode +
+landmine class.
