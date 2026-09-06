@@ -274,3 +274,59 @@ the same schema, later); multi-repo / monorepo-package granularity.
 - Codemap granularity for monorepos — per-package or per-app? (deferred, monorepo out for v0.1)
 - Review-comment mining needs the GitHub API with `pull-requests: read` — acceptable scope for a CI token?
 - Where authored-section staleness is reported when there's no `docs:refresh` cadence — a `docs-health.json` artifact vs a scheduled issue.
+
+---
+
+## 15. Confirmed v0.2 changes (from the a2ui-catalogue pressure-test)
+
+**New deterministic facts** (extractor produces them; each prevents a quietly
+wrong surface):
+
+- `facts.clone_gaps[]` — paths referenced in docs but gitignored / absent from a
+  fresh clone. Every section that leans on one must gap-flag. (a2ui-catalogue:
+  `ops/`, `a2uithoughts.md` — its whole documented workflow is invisible to the
+  actual audience.)
+- `facts.repo_kind` — `service | library | toolkit | monorepo | docs`. Shapes the
+  "Run it" section: a toolkit with no server shouldn't read as a pile of UNKNOWNs.
+- `facts.sibling_repos[]` — cross-repo checkout dependencies ("needs `../x` for Y").
+
+**New landmines source** (§6): **config-file prose** — comments in CI yml,
+Makefiles, `.tool-versions`, `requirements.txt`. (a2ui-catalogue's
+`requirements.txt` ↔ `deploy.yml` hand-sync landmine came from exactly there.)
+
+**`exposure` mode + landmine classification.** An honest onboarding surface
+over-shares if unguarded — it amplifies buried `CLAUDE.md` candour into a
+front-and-centre `ARCHITECTURE.md`, names private infra, and catalogues
+fragility a competitor or adopter reads very differently than a contributor.
+
+- `exposure: internal` (default when output lands in a private repo / gated docs)
+  — full candour.
+- `exposure: public` — landmines **generalised** (no private-repo names, no
+  credential paths, no gitignored-file pointers); a "cross-repo config pair is
+  hand-synced — ask a maintainer" instead of naming the two files.
+
+Every landmine record gets a `class`:
+
+| `class` | `public` handling |
+|---|---|
+| `operational` — fragility the team already knows ("deploy ≠ reachable") | generalise, keep |
+| `exploitable` — "fails silently", "can be bypassed", "no guard" | **never public-verbatim** — emit to a separate maintainer-only report |
+| `private-ref` — names a private repo / credential path / hidden tier | strip or generalise |
+
+Add to §13 rubric: **No over-exposure** — in `public` mode, zero `exploitable`
+or `private-ref` landmines appear verbatim.
+
+## 16. Later — visuals
+
+Once the spec is stable, the surface should carry diagrams, not just prose:
+
+- **Deterministic diagrams** from `facts.json` — a module graph and the dynamic
+  path (entry → handler → store) as **Mermaid** (GitHub renders it inline, and it
+  regenerates on the CI-formatter cadence like any other deterministic block).
+- **Illustrative artwork** — a hero visual / a hand-drawn architecture sketch via
+  the **sketch agent** (`a2a_sketch_executor` / `agent_sketchpad`). Distinctive,
+  branded, and a natural fit for the v2 interactive A2UI surface rather than the
+  Markdown exports.
+
+Keep the split: Mermaid where the picture *is* the facts; the sketch agent where
+the picture is there to make the page inviting.
