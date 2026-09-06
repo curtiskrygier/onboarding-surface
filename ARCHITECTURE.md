@@ -4,15 +4,13 @@
 ![Architecture sketch](assets/onboarding/architecture-sketch.svg)
 
 | module | what it does | grep for |
-|---|---|---|
-| `serve/` | <!-- what it does: authored --> |  |
-| `author/` | <!-- what it does: authored --> |  |
-| `extract/` | <!-- what it does: authored --> |  |
-| `draw/` | <!-- what it does: authored --> |  |
-| `render/` | <!-- what it does: authored --> |  |
-| `review/` | <!-- what it does: authored --> |  |
-
-> **UNKNOWN** — per-module descriptions are authored — run `python3 -m author`
+| --- | --- | --- |
+| serve | Exposes pipeline operations as stateless remote A2A skills | `serve/__main__.py` |
+| author | Runs governed LLM calls over facts to produce prose and landmines | `author/__main__.py` |
+| extract | Extracts deterministic repository facts into `facts.json` | `extract/__main__.py` |
+| draw | Produces D2 architecture sketches and visual mark proposals | `draw/__main__.py` |
+| render | Renders repository facts and authored prose into documentation files | `render/__main__.py` |
+| review | Serves a read-only human-in-the-loop review interface | `review/__main__.py` |
 <!-- onboarding-surface:end codemap -->
 
 <!-- onboarding-surface:begin landmines -->

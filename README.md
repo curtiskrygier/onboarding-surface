@@ -9,14 +9,6 @@ module's own `README.md`), but interfaces, prompts and the spec itself are
 still moving. Not a maintained product; use it as a reference or fork it, but
 don't expect semver or a support channel.
 
-An agent that turns a repository into a **contributor onboarding surface** — the
-docs a new contributor needs to go from `git clone` to a merged first PR, kept
-true as the code changes.
-
-Primary output is lean, truth-guaranteed Markdown: `README.md`, `ARCHITECTURE.md`,
-`CONTRIBUTING.md`. An optional interactive surface (progress-tracked walkthrough,
-"document that learns" analytics) is a later, separate concern — not the pitch.
-
 ## The one rule
 
 **Never fabricate.** "Verification command: UNKNOWN (not found in repo)" beats an
@@ -55,15 +47,16 @@ experimentation repo that onboards other agents and tools and harvests
 reusable patterns across them; that repo isn't part of this one's contract.
 
 <!-- onboarding-surface:begin what-it-is -->
-<!-- authored: pending — run `python3 -m author` -->
+onboarding-surface is a truth-guaranteed contributor onboarding documentation pipeline that derives verified documentation from a repository. It is designed for maintainers and developers who require contributor documentation—such as README, ARCHITECTURE, and CONTRIBUTING files—generated without fabricated setup commands or unverified claims.
 <!-- onboarding-surface:end what-it-is -->
 
 <!-- onboarding-surface:begin maturity -->
-quiet — a few commits in the last 90 days; CI: docs.yml.
+active — ~20 commits in the last 90 days; latest release `v1.0.0`; CI: docs.yml.
 <!-- onboarding-surface:end maturity -->
 
 <!-- onboarding-surface:begin orientation -->
-<!-- authored: pending — run `python3 -m author` -->
+The essential mental model is a strict, staged pipeline where deterministic fact extraction strictly precedes authored prose: repository facts are collected into `facts.json`, governed prose is authored under an anti-fabrication contract, and markdown documentation is rendered without guessing absent values.
+The project exists to provide contributor documentation that remains provably accurate as code evolves.
 <!-- onboarding-surface:end orientation -->
 
 <!-- onboarding-surface:begin run-it -->

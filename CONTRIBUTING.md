@@ -1,7 +1,7 @@
 # Contributing
 
 <!-- onboarding-surface:begin first-contribution -->
-<!-- authored: pending — run `python3 -m author` -->
+> UNKNOWN — no starter issues and no recent small changes
 <!-- onboarding-surface:end first-contribution -->
 
 <!-- onboarding-surface:begin pr-gates -->
