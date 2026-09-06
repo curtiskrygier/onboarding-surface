@@ -8,7 +8,6 @@ Starter issues carry `good first issue` / `help wanted` — check the tracker. A
 - CI must pass — `.github/workflows/`: build-apps.yml, deploy.yml, gemini-review.yml, release-renderer.yml.
 
 Not found (so not required): CLA/DCO, a commit convention, a PR template.
-> **UNKNOWN** — branch-protection rules and required status checks are GitHub-only — not read offline
 <!-- onboarding-surface:end pr-gates -->
 
 <!-- onboarding-surface:begin verify -->

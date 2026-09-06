@@ -32,11 +32,13 @@ def _flag(msg: str) -> str:
     return f"> **UNKNOWN** — {msg}"
 
 
-def _authored(records: dict, name: str, *, fallback: str = "") -> str:
+def _authored(records: dict, name: str, *, fallback: str | None = None) -> str:
     body = (records or {}).get(name)
     if body:
         return body.strip()
-    return fallback or "<!-- authored: pending — run `python3 -m author` -->"
+    # fallback="" is a deliberate "render nothing" (the model had nothing to add);
+    # only fall through to the pending marker when no fallback was given at all.
+    return fallback if fallback is not None else "<!-- authored: pending — run `python3 -m author` -->"
 
 
 # ── deterministic section renderers ─────────────────────────────────────────
@@ -61,9 +63,14 @@ def sec_maturity(f: dict) -> str:
 _PRIVATE_HINT = re.compile(r"(^|/)(ops|private|internal|secret|\.clasp|clasprc)", re.I)
 
 
-def sec_run_it(f: dict, records: dict, exposure: str = "internal") -> str:
+def sec_run_it(f: dict, records: dict, exposure: str = "internal"):
+    """Returns (body_md, maint_notes[]). In public mode a build/regen gap that is
+    purely private tooling is NOT flagged in the doc — a public contributor
+    building with the shown commands doesn't need an 'ask a maintainer about the
+    hidden flow' caveat (the sibling-repos line already carries that signal). It
+    goes to MAINTAINER-NOTES.md instead (spec §15)."""
     r, kind = f["run"], f["repo_kind"]
-    out = []
+    out, maint = [], []
     if kind in ("library", "toolkit", "docs"):
         out.append(f"This repo is a **{kind}** — there is no server to start. "
                    "\"Running it\" means the build/test pipeline below.")
@@ -103,10 +110,17 @@ def sec_run_it(f: dict, records: dict, exposure: str = "internal") -> str:
 
     gaps = [g for g in f["clone_gaps"] if any(x in g["path"] for x in ("ops", "run", "make", "build"))]
     if gaps:
-        private = exposure == "public" and any(_PRIVATE_HINT.search(g["path"]) for g in gaps)
-        if private:
-            out.append(_flag("some referenced build/regeneration tooling is not in a "
-                             "public clone — ask a maintainer for the contributor flow."))
+        if exposure == "public":
+            priv = [g for g in gaps if _PRIVATE_HINT.search(g["path"])]
+            pub = [g for g in gaps if not _PRIVATE_HINT.search(g["path"])]
+            if pub:
+                out.append(_flag("regenerate/build from a clone: the docs reference "
+                                 + ", ".join(f"`{g['path']}`" for g in pub[:3])
+                                 + " which is " + pub[0]["why"] + " — ask a maintainer."))
+            if priv:
+                maint.append("run-it: the docs reference build/regeneration tooling ("
+                             + ", ".join(f"`{g['path']}`" for g in priv[:3])
+                             + ") not in a public clone — omitted from the public run-it section.")
         else:
             out.append(_flag("regenerate/build from a clone: the docs reference "
                              + ", ".join(f"`{g['path']}`" for g in gaps[:3])
@@ -122,12 +136,28 @@ def sec_run_it(f: dict, records: dict, exposure: str = "internal") -> str:
     extra = _authored(records, "run-it", fallback="")
     if extra:
         out += ["", extra]
-    return "\n\n".join(x for x in out if x is not None)
+    return "\n\n".join(x for x in out if x is not None), maint
 
 
-def sec_codemap(f: dict, records: dict, exposure: str) -> str:
+def _strip_private_table_rows(md: str, toks: set[str]) -> tuple[str, list[str]]:
+    """Public mode: drop a whole markdown table row whose cells name a private
+    token. A row is structured — dropping it is not the char-level prose
+    mangling that was tried and reverted. Header/separator rows are kept."""
+    kept, dropped = [], []
+    for ln in md.splitlines():
+        s = ln.strip()
+        is_row = s.startswith("|") and not re.match(r"\|[\s:|-]+\|?\s*$", s)
+        if is_row and _hits_private(ln, toks):
+            dropped.append(re.sub(r"\s+", " ", s)[:120])
+            continue
+        kept.append(ln)
+    return "\n".join(kept), dropped
+
+
+def sec_codemap(f: dict, records: dict, exposure: str):
+    """Returns (body_md, maint_notes[])."""
     s = f["structure"]
-    out = []
+    out, maint = [], []
     # §16b architecture sketch (draw agent) if present. §16a Mermaid module graph
     # is deferred until it can show real dependency edges — a nodes-only flowchart
     # isn't worth the space.
@@ -136,12 +166,16 @@ def sec_codemap(f: dict, records: dict, exposure: str) -> str:
         out.append("![Architecture sketch](assets/onboarding/architecture-sketch.svg)\n")
     authored_map = _authored(records, "codemap", fallback="")
     if authored_map:
+        if exposure == "public":
+            authored_map, dropped = _strip_private_table_rows(authored_map, _private_tokens(f))
+            maint += [f"codemap: dropped a table row naming private tooling — `{d}`"
+                      for d in dropped]
         out.append(authored_map)
     else:
         rows = [[f"`{m}/`", "<!-- what it does: authored -->", ""] for m in s["modules"][:12]]
         out.append(_md_table(["module", "what it does", "grep for"], rows))
         out.append(_flag("per-module descriptions are authored — run `python3 -m author`"))
-    return "\n\n".join(out)
+    return "\n\n".join(out), maint
 
 
 def _landmine_records(records: dict) -> list[dict]:
@@ -153,13 +187,14 @@ def _landmine_records(records: dict) -> list[dict]:
     if isinstance(lm, str) and lm.strip() and lm.strip() != "None extracted.":
         out = []
         for line in lm.splitlines():
-            line = line.strip().lstrip("-* ").strip()
+            line = re.sub(r"^\s*[-*+]\s+", "", line.rstrip()).strip()  # one bullet marker only
             if not line:
                 continue
-            m = re.search(r"\*\(source:\s*([^)]+?)\)\*", line)
-            out.append({"statement": re.sub(r"\s*\*\(source:.*?\)\*\.?$", "", line),
-                        "source": m.group(1).strip() if m else "authored",
-                        "class": "operational"})
+            # trailing *(...)* is the source cite — with or without a "source:" prefix
+            m = re.search(r"\*\(\s*(?:source:\s*)?([^)]+?)\s*\)\*\s*$", line)
+            src = m.group(1).strip() if m else "authored"
+            stmt = line[:m.start()].rstrip(" .") if m else line
+            out.append({"statement": stmt, "source": src, "class": "operational"})
         return out
     return []
 
@@ -358,13 +393,15 @@ def render(facts: dict, authored: dict | None = None, *, exposure: str = "intern
            fresh: bool = False) -> dict[str, str]:
     authored = authored or {}
     lm_body, lm_held = sec_landmines(facts, authored, exposure)
+    run_body, run_maint = sec_run_it(facts, authored, exposure)
+    cm_body, cm_maint = sec_codemap(facts, authored, exposure)
     bodies = {
         "what-it-is": _authored(authored, "what-it-is"),
         "maturity": sec_maturity(facts),
         "orientation": _authored(authored, "orientation"),
-        "run-it": sec_run_it(facts, authored, exposure),
+        "run-it": run_body,
         "pointers": sec_pointers(facts, exposure),
-        "codemap": sec_codemap(facts, authored, exposure),
+        "codemap": cm_body,
         "landmines": lm_body,
         "first-contribution": _authored(authored, "first-contribution"),
         "pr-gates": sec_pr_gates(facts),
@@ -391,10 +428,15 @@ def render(facts: dict, authored: dict | None = None, *, exposure: str = "intern
             parts += [f"- **[{r['class']}]** {r['statement'].rstrip('.')}. *(source: {r['source']})*"
                       for r in lm_held]
             parts.append("")
+        flow_maint = run_maint + cm_maint
+        if flow_maint:
+            parts.append("## Contributor-flow details kept out of the public docs\n")
+            parts += [f"- {x}" for x in flow_maint]
+            parts.append("")
         if leaks:
             parts.append("## Residual private references in authored prose — edit before publishing\n")
             parts += [f"- {x}" for x in leaks]
-        if lm_held or leaks:
+        if lm_held or flow_maint or leaks:
             out["MAINTAINER-NOTES.md"] = "\n".join(parts) + "\n"
     return out
 

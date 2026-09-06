@@ -26,8 +26,6 @@ pip install -r requirements.txt
 
 Test: `python3 -m pytest`
 
-> **UNKNOWN** — some referenced build/regeneration tooling is not in a public clone — ask a maintainer for the contributor flow.
-
 **Sibling repos:** some processes need a private sibling repo checked out alongside — ask a maintainer.
 
 Operational processes require the private tier symlinks and manifest declared in `project.yaml` to be present before running automated tooling.

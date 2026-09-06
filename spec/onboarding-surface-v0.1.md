@@ -320,7 +320,9 @@ class}`:
 
 1. **Filters** — keeps only `operational` records in the `landmines` block; the
    rest go to a `MAINTAINER-NOTES.md` sibling file (never written into the repo
-   docs), with a one-line footnote in the block saying N were held.
+   docs), with a **non-quantified** footnote ("some maintainer-only notes … kept
+   out of the public docs" — no count, no class names: a "3 held back" line
+   advertises what to go looking for).
 2. **Safety net** — any record the model called `operational` whose statement
    still names a `clone_gaps` path, a `sibling_repos` name, or a known
    credential/private token is force-reclassified to `private-ref` before the
@@ -332,8 +334,20 @@ class}`:
    human, never machine-rewritten — string redaction was tried and reverted as
    too fragile).
 
-Deterministic sections (`pointers`, `run-it` machine parts, sibling-repo line)
-are filtered in `render` directly — they never reach the model.
+**Deterministic sections are filtered in `render` directly — they never reach
+the model:**
+
+- `pointers`, `run-it` machine parts, the sibling-repo line → generalised
+  wording, no private names.
+- `run-it` build/regen `clone_gaps` → a gap that is **purely private tooling**
+  (matches `_PRIVATE_HINT`) is **omitted entirely** from the public section — no
+  `> **UNKNOWN**` caveat announcing a hidden flow — and noted in
+  `MAINTAINER-NOTES.md`. A non-private buildable gap is still named for the
+  contributor.
+- `codemap` (authored) → a **whole markdown table row** whose cells name a
+  private token is dropped in `public` mode (row-level, not char-level) and
+  noted. Row deletion is structured; it is not the prose mangling that was
+  reverted.
 
 `MAINTAINER-NOTES.md` is surfaced in the HITL `review` page under "Held back from
 the public surface".

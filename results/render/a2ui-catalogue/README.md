@@ -9,7 +9,7 @@ Independent, unofficial — not affiliated with Google.
 <!-- onboarding-surface:end what-it-is -->
 
 <!-- onboarding-surface:begin maturity -->
-near-daily — 478 commits in the last 90 days; latest release `v1.0.2`; CI: build-apps.yml, deploy.yml, gemini-review.yml, release-renderer.yml.
+near-daily — 479 commits in the last 90 days; latest release `v1.0.2`; CI: build-apps.yml, deploy.yml, gemini-review.yml, release-renderer.yml.
 <!-- onboarding-surface:end maturity -->
 
 <!-- onboarding-surface:begin orientation -->
@@ -32,8 +32,6 @@ Test: `python3 -m pytest`
 > **UNKNOWN** — regenerate/build from a clone: the docs reference `ops.py` which is absent — ask a maintainer.
 
 **Sibling repos:** some processes need `../a2ui-private` checked out alongside.
-
-<!-- authored: pending — run `python3 -m author` -->
 <!-- onboarding-surface:end run-it -->
 
 <!-- onboarding-surface:begin pointers -->
