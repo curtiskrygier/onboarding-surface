@@ -27,9 +27,9 @@ from author import vendor_vertex_rest as vx
 AUTHORED_SECTIONS = {
     "what-it-is":        "explanation — one paragraph: what this repo is, who it's for. No feature list.",
     "orientation":       "explanation — the one mental model a newcomer must hold, and (one line) why the project exists. Not how-to.",
-    "run-it":            "tutorial — ONLY the judgement bits the machine facts miss: a non-obvious prerequisite, an ordering gotcha, what 'it worked' looks like. If nothing to add, return an empty string.",
+    "run-it":            "tutorial — AT MOST two sentences, and only if the machine facts genuinely miss something: a non-obvious prerequisite, an ordering gotcha, or what 'it worked' looks like. Do NOT restate the install/test commands or the sibling-repo note — those are already rendered. Nothing to add → empty string.",
     "codemap":           "reference — a markdown table: | module | what it does | grep for |. One row per module in facts.structure.modules. 'grep for' names a symbol, never a path:line. No prose around it.",
-    "landmines":         "explanation — the things that will bite someone changing this code, as a markdown bullet list. Each ends with *(source: …)*. ONLY from the invariant rules, the git-history flags, and the agent-doc prose provided. If there is nothing real, return exactly: None extracted.",
+    "landmines":         "explanation — a JSON ARRAY of records, one per real landmine. Each: {statement, source, class}. `statement` = one sentence, what bites someone changing this code (British English, plain). `source` = 'CLAUDE.md' | 'AGENTS.md' | 'lint config' | 'git history'. `class` = 'operational' (fragility the team already documents — deploy≠reachable, stop-after-two-failures), 'exploitable' (describes a silent failure, a bypass, an unguarded gap), or 'private-ref' (names a private repo, a credential path, a gitignored file, or a hidden internal tier). ONLY from the invariant rules, history flags, and agent-doc prose provided. Nothing real → an empty array [].",
     "first-contribution":"how-to — a scoped first change with a clear definition of done, from the starter issues or (if none) the smallest recent changes. Don't invent scope.",
     "verify":            "how-to — ONLY what the test command alone doesn't convey: which checks matter, what a specific failure means. If nothing to add, empty string.",
 }
@@ -54,10 +54,11 @@ HARD RULES — a violation makes the output worse than nothing:
 
 Return ONLY the JSON object. Keys: {keys}."""
 
-_EXPOSURE_PUBLIC = """- EXPOSURE = public. In landmines: generalise anything that
-  names a private repo, a credential path, or a hidden tier; drop anything that
-  describes a silent-failure or bypass. Keep operational fragility the team
-  already documents, generalised."""
+_EXPOSURE_PUBLIC = """- EXPOSURE = public. In EVERY section: never name a private
+  repo, a credential path, a gitignored file, or a hidden internal tier —
+  generalise to "a private/internal path" or "a private sibling repo". In
+  landmines: still classify each record honestly (the render step drops the
+  non-operational ones); write operational ones already generalised."""
 
 
 def _digest(repo: Path, facts: dict, *, max_doc=14000) -> str:
@@ -83,7 +84,7 @@ def build_authored(facts: dict, *, model="gemini-3.8-flash", exposure="internal"
     gap_flags = {
         "run-it": "", "verify": "",
         "codemap": "(module list unavailable)",
-        "landmines": "None extracted.",
+        "landmines": "[]",
         "what-it-is": "> UNKNOWN — no description available",
         "orientation": "> UNKNOWN — no design docs to summarise",
         "first-contribution": "> UNKNOWN — no starter issues and no recent small changes",
@@ -101,7 +102,17 @@ def build_authored(facts: dict, *, model="gemini-3.8-flash", exposure="internal"
     )
     schema = {
         "type": "OBJECT",
-        "properties": {k: {"type": "STRING"} for k in keys},
+        "properties": {
+            k: ({"type": "ARRAY", "items": {
+                    "type": "OBJECT",
+                    "properties": {"statement": {"type": "STRING"},
+                                   "source": {"type": "STRING"},
+                                   "class": {"type": "STRING",
+                                             "enum": ["operational", "exploitable", "private-ref"]}},
+                    "required": ["statement", "source", "class"]}}
+                 if k == "landmines" else {"type": "STRING"})
+            for k in keys
+        },
         "required": keys,
     }
     resp = vx.call(model, [{"role": "user", "parts": [{"text": user}]}],
@@ -116,8 +127,16 @@ def build_authored(facts: dict, *, model="gemini-3.8-flash", exposure="internal"
     # on-the-way-out checks
     warnings = []
     for k, v in out.items():
-        if re.search(r"\b\w+\.\w+:\d+", v or ""):
+        if isinstance(v, str) and re.search(r"\b\w+\.\w+:\d+", v):
             warnings.append(f"{k}: contains a file:line reference")
-        if k == "landmines" and v and v != "None extracted." and "*(source:" not in v:
-            warnings.append("landmines: a bullet has no *(source: …)*")
+    lm = out.get("landmines")
+    if isinstance(lm, list):
+        for i, r in enumerate(lm):
+            if not isinstance(r, dict) or {"statement", "source", "class"} - set(r):
+                warnings.append(f"landmines[{i}]: missing statement/source/class")
+        held = [r for r in lm if isinstance(r, dict)
+                and r.get("class") in ("exploitable", "private-ref")]
+        if exposure == "public" and held:
+            warnings.append(f"landmines: {len(held)} record(s) "
+                            "will be moved to MAINTAINER-NOTES.md by render (public)")
     return {"_model": model, "_exposure": exposure, "_warnings": warnings, **out}

@@ -21,6 +21,10 @@ def main() -> int:
 
     od = Path(a.out_dir)
     od.mkdir(parents=True, exist_ok=True)
+    # MAINTAINER-NOTES.md is a public-mode artefact only — clear a stale one so
+    # an internal re-render of the same dir doesn't leave it behind.
+    if "MAINTAINER-NOTES.md" not in res:
+        (od / "MAINTAINER-NOTES.md").unlink(missing_ok=True)
     for name, text in res.items():
         (od / name).write_text(text)
         print(f"wrote {od/name}  ({len(text)} bytes)")

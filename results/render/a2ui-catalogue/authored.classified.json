@@ -1,0 +1,55 @@
+{
+  "_model": "gemini-3.8-flash",
+  "_exposure": "public",
+  "_warnings": [
+    "landmines: 2 class(es) will be moved to MAINTAINER-NOTES.md by render (public)"
+  ],
+  "what-it-is": "a2ui is a typed UI vocabulary and specification for AI agents implementing the a2ui protocol, providing atomic interface components that agents compose into rendered surfaces across web, Google Meet, Google Chat, Google Apps Script, and Model Context Protocol (MCP) environments.",
+  "orientation": "The repository operates under a strict declarative-manifest model where renderer implementations are the ground truth over documentation schemas, and deployment reachability must always be verified directly against live surfaces.\nIt exists to provide an open, standardized generative UI vocabulary so autonomous agents can render interactive interfaces without proprietary lock-in.",
+  "run-it": "Operational processes require the private tier symlinks and manifest declared in `project.yaml` to be present before running automated tooling.",
+  "codemap": "| module | what it does | grep for |\n| --- | --- | --- |\n| a2a_counterpart | Agent-to-agent counterpart integration and entrypoint | grep `main` |\n| apps-script-surface | Google Apps Script UI surfaces, state handling, and renderer templates | grep `MCP_VERBS` |\n| benchmarks | Performance and compliance benchmarks | grep `benchmark` |\n| cloud-run-renderer | Cloud Run server implementation for hosting the renderer | grep `server` |\n| components | Composite UI component declarations | grep `components` |\n| examples | Demonstration payloads and usage examples | grep `examples` |\n| googlechat | Google Chat card interfaces and rendering adaptations | grep `googlechat` |\n| knowledge-catalogue | Catalogue schemas and knowledge documentation | grep `catalogue` |\n| molecules | Mid-level compound UI molecule definitions | grep `molecules` |\n| renderers | Target platform UI renderer implementations | grep `renderers` |\n| scripts | Utility generation, URL formatting, and validation scripts | grep `make_url` |\n| spec | Domain specifications and training prompt contracts | grep `training-md` |\n| src | Core library implementation source files | grep `src` |\n| tests | Python verification suite testing manifests, staging, and parity | grep `test_staging` |\n| tests-js | JavaScript and Node-based test suites | grep `test` |",
+  "landmines": [
+    {
+      "statement": "Renderer source code is ground truth over schema documentation, meaning discrepancies in field shapes favour the renderer implementation.",
+      "source": "AGENTS.md",
+      "class": "operational"
+    },
+    {
+      "statement": "Operational tooling, internal logs, and incident records rely on symlinks into a private sibling repository that are absent in a clean checkout.",
+      "source": "AGENTS.md",
+      "class": "private-ref"
+    },
+    {
+      "statement": "A wired surface MCP action will fail silently if its verb is not present in both the MCP worker definitions and the Apps Script transport allowlist.",
+      "source": "CLAUDE.md",
+      "class": "exploitable"
+    },
+    {
+      "statement": "Changes to `spec/` prompt contracts require re-running the prompt generation process to bump the handoff cache.",
+      "source": "CLAUDE.md",
+      "class": "operational"
+    },
+    {
+      "statement": "Changes to atoms default to preview stage and are strictly prevented from public deployment until explicitly promoted and audited.",
+      "source": "CLAUDE.md",
+      "class": "operational"
+    },
+    {
+      "statement": "Updates to tools require immediate parity suite updates within the same commit or the deployment gate will deadlock.",
+      "source": "CLAUDE.md",
+      "class": "operational"
+    },
+    {
+      "statement": "Encoded payload URLs must always be emitted using `scripts/make_url.py` rather than typed or copied manually.",
+      "source": "CLAUDE.md",
+      "class": "operational"
+    },
+    {
+      "statement": "Never diagnose a failure for a third time without stopping to report observations and ruled-out hypotheses.",
+      "source": "CLAUDE.md",
+      "class": "operational"
+    }
+  ],
+  "first-contribution": "Resolve parser parity between `scripts/parse_training_md.py` and Apps Script counterparts, or update atom definitions under `atoms/schema.yaml` marked as `stage: preview`. Run `python3 -m pytest tests/ -q` to confirm the manifest and staging audits pass without error.",
+  "verify": "Running `python3 -m pytest tests/ -q` validates the project manifest and verifies that no staging-level preview atoms are leaked into published artifacts."
+}

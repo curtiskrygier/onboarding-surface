@@ -305,16 +305,42 @@ fragility a competitor or adopter reads very differently than a contributor.
   credential paths, no gitignored-file pointers); a "cross-repo config pair is
   hand-synced — ask a maintainer" instead of naming the two files.
 
-Every landmine record gets a `class`:
+**Enforced by classification + a deterministic render filter, not by the prompt
+alone.** The prompt tells `author` to generalise; the render step then *proves*
+it. `author` returns `landmines` as a JSON array of records `{statement, source,
+class}`:
 
 | `class` | `public` handling |
 |---|---|
-| `operational` — fragility the team already knows ("deploy ≠ reachable") | generalise, keep |
-| `exploitable` — "fails silently", "can be bypassed", "no guard" | **never public-verbatim** — emit to a separate maintainer-only report |
-| `private-ref` — names a private repo / credential path / hidden tier | strip or generalise |
+| `operational` — fragility the team already knows ("deploy ≠ reachable") | kept, written already-generalised |
+| `exploitable` — "fails silently", "can be bypassed", "no guard" | **dropped from the doc** — moved to `MAINTAINER-NOTES.md` |
+| `private-ref` — names a private repo / credential path / hidden tier | **dropped from the doc** — moved to `MAINTAINER-NOTES.md` |
+
+`render --exposure public` then:
+
+1. **Filters** — keeps only `operational` records in the `landmines` block; the
+   rest go to a `MAINTAINER-NOTES.md` sibling file (never written into the repo
+   docs), with a one-line footnote in the block saying N were held.
+2. **Safety net** — any record the model called `operational` whose statement
+   still names a `clone_gaps` path, a `sibling_repos` name, or a known
+   credential/private token is force-reclassified to `private-ref` before the
+   filter runs. A stale hand-written `authored.json` (legacy string landmines,
+   all `operational`) is caught here too.
+3. **Leak scan** — authored *prose* sections (`what-it-is`, `orientation`,
+   `run-it`, `first-contribution`, `codemap`) are scanned for the same private
+   tokens; residual hits are **reported** to `MAINTAINER-NOTES.md` (flagged for a
+   human, never machine-rewritten — string redaction was tried and reverted as
+   too fragile).
+
+Deterministic sections (`pointers`, `run-it` machine parts, sibling-repo line)
+are filtered in `render` directly — they never reach the model.
+
+`MAINTAINER-NOTES.md` is surfaced in the HITL `review` page under "Held back from
+the public surface".
 
 Add to §13 rubric: **No over-exposure** — in `public` mode, zero `exploitable`
-or `private-ref` landmines appear verbatim.
+or `private-ref` landmines appear verbatim in the docs; every held record and
+every residual prose leak is accounted for in `MAINTAINER-NOTES.md`.
 
 ## 16. Visuals (v0.2 candidate — tested 2026-09-06)
 

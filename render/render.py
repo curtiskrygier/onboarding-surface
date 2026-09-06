@@ -144,36 +144,108 @@ def sec_codemap(f: dict, records: dict, exposure: str) -> str:
     return "\n\n".join(out)
 
 
-def sec_landmines(f: dict, records: dict, exposure: str) -> str:
-    inv, hist = f["invariants"], f["history"]
-    items: list[str] = []
+def _landmine_records(records: dict) -> list[dict]:
+    """Normalise: classified array (current author) or a legacy markdown string
+    (hand-written authored.json) -> [{statement, source, class}]."""
+    lm = (records or {}).get("landmines")
+    if isinstance(lm, list):
+        return [r for r in lm if isinstance(r, dict) and r.get("statement")]
+    if isinstance(lm, str) and lm.strip() and lm.strip() != "None extracted.":
+        out = []
+        for line in lm.splitlines():
+            line = line.strip().lstrip("-* ").strip()
+            if not line:
+                continue
+            m = re.search(r"\*\(source:\s*([^)]+?)\)\*", line)
+            out.append({"statement": re.sub(r"\s*\*\(source:.*?\)\*\.?$", "", line),
+                        "source": m.group(1).strip() if m else "authored",
+                        "class": "operational"})
+        return out
+    return []
+
+
+def _private_tokens(facts: dict) -> set[str]:
+    toks = {g["path"] for g in facts["clone_gaps"] if g["why"] == "gitignored"}
+    toks |= set(facts["sibling_repos"])
+    toks |= {"Code.private", ".clasp.json", "clasprc", "ops/ops.py", "ops.py",
+             "mcp-worker", "A2UIState", "a2uithoughts"}
+    return {t for t in toks if t}
+
+
+# Structural private-content signals that name nothing in the token set
+# (Gemini 3.8 review: paraphrase and syntax escape a literal match). Kept
+# deliberately tight — a hit means "a human should look", it does not rewrite.
+_PRIVATE_RE = [
+    re.compile(r"\b[A-Z][A-Z0-9]{2,}_(?:KEY|SECRET|TOKEN|PASSWORD|PASS|AUTH|CRED|CREDENTIALS)\b"),
+    re.compile(r"\b(?:https?://)?[a-z0-9.-]+\.(?:internal|corp|local|intranet)\b", re.I),
+    re.compile(r"\b(?:10|127)\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"),
+    re.compile(r"\b192\.168\.\d{1,3}\.\d{1,3}\b"),
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+]
+
+
+def _hits_private(text: str, toks: set[str]) -> bool:
+    if any(re.search(r"(^|[\s`(/])" + re.escape(t) + r"($|[\s`).,/])", text) for t in toks):
+        return True
+    return any(rx.search(text) for rx in _PRIVATE_RE)
+
+
+def _reclassify_private(recs: list[dict], toks: set[str]) -> list[dict]:
+    """Deterministic safety net (spec §15): a record the model called
+    'operational' but whose statement still names a private path (or matches a
+    structural credential/internal-host signal) is forced to 'private-ref' so
+    the public render filter holds it back regardless of the model's call.
+    Legacy string landmines (all 'operational') pass through here too."""
+    for r in recs:
+        if r.get("class") != "operational":
+            continue
+        if _hits_private(r.get("statement", ""), toks):
+            r["class"] = "private-ref"
+    return recs
+
+
+def sec_landmines(f: dict, records: dict, exposure: str):
+    """Returns (body_md, maintainer_records[]). In public mode, exploitable and
+    private-ref records are dropped from the body and returned separately for
+    MAINTAINER-NOTES.md (spec §15)."""
+    inv = f["invariants"]
+    det: list[dict] = []
     for rule in inv["boundary_rules"]:
-        items.append(f"- **{rule}** *(source: lint config — verified)*")
+        det.append({"statement": rule, "source": "lint config", "class": "operational"})
     for gp in inv["go_internal_pkgs"]:
-        items.append(f"- `{gp}` is a Go internal package — not importable outside its parent *(verified)*")
+        det.append({"statement": f"`{gp}` is a Go internal package — not importable outside its parent",
+                    "source": "verified", "class": "operational"})
 
-    authored = _authored(records, "landmines", fallback="")
-    if authored and authored != "None extracted.":
-        if items:
-            items.append("")
-        items.append(authored)
+    recs = det + _landmine_records(records)
+    # the model sometimes bakes the *(source: X)* suffix into `statement` despite
+    # the schema — strip it so the renderers don't double it up.
+    for r in recs:
+        r["statement"] = re.sub(r"\.?\s*\*\(source:[^)]*\)\*\.?\s*$", "",
+                                r.get("statement", "")).strip()
 
-    # history flags are weak signal — a footnote, and only if nothing stronger
-    flags = hist["revert_commits"][:3]
-    if flags and not authored:
-        items.append("")
-        items.append("_git history also flags (verify relevance):_ "
-                     + "; ".join(f"`{x.split(chr(32))[0]}`" for x in flags))
-
-    if not items:
-        srcs = "lint configs, revert history, review comments, agent docs"
-        return f"None extracted. Sources checked: {srcs}."
-
+    held: list[dict] = []
     if exposure == "public":
-        items.append("")
-        items.append("*(Rendered for a public surface — `exploitable` and `private-ref` "
-                     "landmines are held to a maintainer-only report; see spec §15.)*")
-    return "\n".join(items)
+        recs = _reclassify_private(recs, _private_tokens(f))
+        kept = [r for r in recs if r["class"] == "operational"]
+        held = [r for r in recs if r["class"] != "operational"]
+        recs = kept
+
+    # No count, no class names in the public footnote: telling a reader "3
+    # landmines held back" advertises exactly what to go looking for
+    # (Gemini 3.8 review — the Streisand footnote). Just point maintainers at
+    # their own file.
+    held_note = "*Some maintainer-only notes for this repo are kept out of the public docs.*"
+
+    if not recs:
+        base = "None extracted. Sources checked: lint configs, revert history, review comments, agent docs."
+        if held:
+            base += "\n\n" + held_note
+        return base, held
+
+    lines = [f"- {r['statement'].rstrip('.')}. *(source: {r['source']})*" for r in recs]
+    if held:
+        lines += ["", held_note]
+    return "\n".join(lines), held
 
 
 def sec_pr_gates(f: dict) -> str:
@@ -264,9 +336,28 @@ FILES = {
 HEADERS = {"README.md": "# {name}", "ARCHITECTURE.md": "# Architecture", "CONTRIBUTING.md": "# Contributing"}
 
 
+def _leak_scan(bodies: dict, facts: dict) -> list[str]:
+    """Public-mode residual-leak check: an authored section body still naming a
+    private path the author was told to generalise. Flags for the human — never
+    mangles the text."""
+    toks = _private_tokens(facts)
+    hits = []
+    for name in ("what-it-is", "orientation", "run-it", "first-contribution", "codemap"):
+        b = bodies.get(name, "")
+        b = b if isinstance(b, str) else ""
+        for t in toks:
+            if t and re.search(r"(^|[\s`(/])" + re.escape(t) + r"($|[\s`).,/])", b):
+                hits.append(f"{name}: still names `{t}` — generalise before publishing")
+        for rx in _PRIVATE_RE:
+            for m in rx.findall(b):
+                hits.append(f"{name}: matches a private-content pattern (`{m}`) — check before publishing")
+    return sorted(set(hits))
+
+
 def render(facts: dict, authored: dict | None = None, *, exposure: str = "internal",
            fresh: bool = False) -> dict[str, str]:
     authored = authored or {}
+    lm_body, lm_held = sec_landmines(facts, authored, exposure)
     bodies = {
         "what-it-is": _authored(authored, "what-it-is"),
         "maturity": sec_maturity(facts),
@@ -274,7 +365,7 @@ def render(facts: dict, authored: dict | None = None, *, exposure: str = "intern
         "run-it": sec_run_it(facts, authored, exposure),
         "pointers": sec_pointers(facts, exposure),
         "codemap": sec_codemap(facts, authored, exposure),
-        "landmines": sec_landmines(facts, authored, exposure),
+        "landmines": lm_body,
         "first-contribution": _authored(authored, "first-contribution"),
         "pr-gates": sec_pr_gates(facts),
         "verify": sec_verify(facts, authored),
@@ -291,6 +382,20 @@ def render(facts: dict, authored: dict | None = None, *, exposure: str = "intern
         for s in sections:
             doc = _splice(doc, s, bodies[s])
         out[fname] = _clean(doc)
+
+    if exposure == "public":
+        leaks = _leak_scan(bodies, facts)
+        parts = ["# Maintainer notes — not for the public surface\n"]
+        if lm_held:
+            parts.append("## Landmines held back (spec §15)\n")
+            parts += [f"- **[{r['class']}]** {r['statement'].rstrip('.')}. *(source: {r['source']})*"
+                      for r in lm_held]
+            parts.append("")
+        if leaks:
+            parts.append("## Residual private references in authored prose — edit before publishing\n")
+            parts += [f"- {x}" for x in leaks]
+        if lm_held or leaks:
+            out["MAINTAINER-NOTES.md"] = "\n".join(parts) + "\n"
     return out
 
 

@@ -98,6 +98,12 @@ details>summary{cursor:pointer;padding:12px 16px;font-weight:600;font-family:var
 .diff{padding:0 22px 18px;border-top:1px solid var(--line)}
 .diff pre{font-family:var(--mono);font-size:12px;line-height:1.5;overflow-x:auto;margin:8px 0}
 .diff .a{color:var(--ok)}.diff .d{color:var(--gap)}.diff .h{color:var(--muted)}
+.maint{border:1px solid var(--warn);border-left-width:3px;border-radius:0 10px 10px 0;
+background:var(--panel);padding:4px 22px 16px}
+.maint h1{font-size:16px;color:var(--warn)}
+.maint h2{font-family:var(--sans);text-transform:none;letter-spacing:0;color:var(--ink);font-size:14px;margin:18px 0 8px}
+.maint code{font-family:var(--mono);font-size:.86em;background:var(--bg);padding:1px 4px;border-radius:3px}
+.maint ul{padding-left:20px}.maint li{margin:4px 0}
 """
 
 
@@ -133,6 +139,9 @@ def build(facts: dict, docs_dir: Path, repo: Path) -> str:
         d = list(difflib.unified_diff(cur.splitlines(), spliced.splitlines(),
                                       "current", "proposed", lineterm=""))
         diffs[fname] = d
+
+    maint = (docs_dir / "MAINTAINER-NOTES.md")
+    maint_md = maint.read_text() if maint.is_file() else ""
 
     sketch_svg = ""
     for c in (repo / "assets/onboarding/architecture-sketch.svg",
@@ -185,6 +194,7 @@ repo_kind <code>{esc(facts['repo_kind'])}</code></p>
 <div class=stat><b class=k-authored>{n_auth}+{n_hyb}</b><span>authored + hybrid — read these</span></div>
 <div class=stat><b class=f>{len(gaps)}</b><span>UNKNOWNs — check these</span></div>
 <div class=stat><b>{len(facts['clone_gaps'])}</b><span>clone gaps</span></div>
+{"<div class=stat><b class=c-inferred>" + str(maint_md.count(chr(10) + "- ")) + "</b><span>held from public surface</span></div>" if maint_md else ""}
 </div>
 
 <h2>Sections</h2>
@@ -193,6 +203,8 @@ repo_kind <code>{esc(facts['repo_kind'])}</code></p>
 
 <h2>The gaps to check</h2>
 {gaps_html}
+
+{"<h2>Held back from the public surface (spec §15)</h2><div class='maint'>" + _render_md(maint_md) + "</div>" if maint_md else ""}
 
 {"<h2>Architecture sketch</h2><div class=sketch>" + sketch_svg + "</div>" if sketch_svg else ""}
 

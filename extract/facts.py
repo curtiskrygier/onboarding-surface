@@ -289,11 +289,12 @@ _GENERATED_HINT = re.compile(r"(^|/)(public|dist|build|generated|\.generated|ven
 
 
 def history_facts(repo: Path, n: int = 250) -> dict:
+    # tightened: `Revert "` (git's own revert subject) or an explicit regression
+    # phrase in the SUBJECT — the old broad multi-grep over the whole body
+    # caught unrelated commits that merely mention "stale" in passing.
     reverts = []
-    log = _git(repo, "log", "--oneline", "-i", "--grep=revert",
-               "--grep=broke", "--grep=regression", "--grep=stale", "-30")
-    for ln in log.splitlines():
-        if ln.strip():
+    for ln in _git(repo, "log", "--pretty=format:%s", "-400").splitlines():
+        if re.match(r'Revert "', ln) or re.search(r"\b(regression|regressed|broke\b|fixes a real)\b", ln, re.I):
             reverts.append(ln.strip())
 
     churn: Counter = Counter()
@@ -330,6 +331,14 @@ def contrib_facts(repo: Path) -> dict:
             break
     if not commit_conv and re.search(r"^(feat|fix|chore|docs|refactor)(\(.+\))?:", recent, re.M):
         commit_conv = "conventional-commits (observed in history, no config)"
+    elif not commit_conv:
+        hints = []
+        if recent.count("Co-Authored-By:") >= 5:
+            hints.append("commits carry a Co-Authored-By trailer")
+        if len(re.findall(r"\(#\d+\)\s*$", recent, re.M)) >= 5:
+            hints.append("subjects end with a (#NN) PR reference")
+        if hints:
+            commit_conv = "house style: " + "; ".join(hints)
 
     pr_template = None
     for fn in (".github/PULL_REQUEST_TEMPLATE.md", ".github/pull_request_template.md",
@@ -374,9 +383,19 @@ _PATHY_EXT = re.compile(
     r"\.(py|js|mjs|cjs|ts|tsx|jsx|go|rs|rb|java|gs|sh|md|ya?ml|json|toml|ini|cfg|html|css|txt)$")
 
 
+# backticked tokens that look pathy but are API surface / config keys, not files
+_NOT_A_PATH = {
+    "tools/list", "tools/call", "resources/list", "prompts/list", "n/a",
+    "and/or", "http/https", "input/output", "read/write", "client/server",
+    "src/main", "os/exec",
+}
+
+
 def _looks_like_repo_path(cand: str) -> bool:
     """A backticked token that plausibly names a file IN THIS repo — not a URL
-    fragment, an absolute path, or a code identifier like `budget.stop_when`."""
+    fragment, an absolute path, an API method, or a code identifier."""
+    if cand.lower() in _NOT_A_PATH:
+        return False
     if cand.startswith(("http", "/", "~", ".")) or " " in cand:
         return False
     if re.match(r"[\w-]+\.(ai|com|org|io|dev|net)(/|$)", cand):     # domain
