@@ -58,7 +58,10 @@ def sec_maturity(f: dict) -> str:
     return ("; ".join(bits) + ".") if bits else _flag("no commit history readable")
 
 
-def sec_run_it(f: dict, records: dict) -> str:
+_PRIVATE_HINT = re.compile(r"(^|/)(ops|private|internal|secret|\.clasp|clasprc)", re.I)
+
+
+def sec_run_it(f: dict, records: dict, exposure: str = "internal") -> str:
     r, kind = f["run"], f["repo_kind"]
     out = []
     if kind in ("library", "toolkit", "docs"):
@@ -100,12 +103,21 @@ def sec_run_it(f: dict, records: dict) -> str:
 
     gaps = [g for g in f["clone_gaps"] if any(x in g["path"] for x in ("ops", "run", "make", "build"))]
     if gaps:
-        out.append(_flag("regenerate/build from a clone: the docs reference "
-                         + ", ".join(f"`{g['path']}`" for g in gaps[:3])
-                         + " which is " + gaps[0]["why"] + " — ask a maintainer."))
+        private = exposure == "public" and any(_PRIVATE_HINT.search(g["path"]) for g in gaps)
+        if private:
+            out.append(_flag("some referenced build/regeneration tooling is not in a "
+                             "public clone — ask a maintainer for the contributor flow."))
+        else:
+            out.append(_flag("regenerate/build from a clone: the docs reference "
+                             + ", ".join(f"`{g['path']}`" for g in gaps[:3])
+                             + " which is " + gaps[0]["why"] + " — ask a maintainer."))
     sib = f["sibling_repos"]
     if sib:
-        out.append(f"**Sibling repos:** some processes need `{', '.join('../'+s for s in sib)}` checked out alongside.")
+        if exposure == "public":
+            out.append("**Sibling repos:** some processes need a private sibling repo "
+                       "checked out alongside — ask a maintainer.")
+        else:
+            out.append(f"**Sibling repos:** some processes need `{', '.join('../'+s for s in sib)}` checked out alongside.")
 
     extra = _authored(records, "run-it", fallback="")
     if extra:
@@ -208,7 +220,7 @@ def sec_verify(f: dict, records: dict) -> str:
     return "\n\n".join(out)
 
 
-def sec_pointers(f: dict) -> str:
+def sec_pointers(f: dict, exposure: str = "internal") -> str:
     d, out = f["docs"], []
     if d["has_architecture_md"]:
         out.append("- `ARCHITECTURE.md` — the codemap and landmines")
@@ -220,9 +232,14 @@ def sec_pointers(f: dict) -> str:
         out.append(f"- `{ad}` — operating rules (and the best landmine source)")
     for dd in d["doc_dirs"]:
         out.append(f"- `{dd}/` — deeper docs")
-    for g in f["clone_gaps"]:
-        if g["why"] == "gitignored":
-            out.append(f"- `{g['path']}` — referenced in {g['in']} but **gitignored, not in a clone**")
+    ignored = [g for g in f["clone_gaps"] if g["why"] == "gitignored"]
+    if ignored:
+        # a gitignored path IS the private signal — in public mode never name them.
+        if exposure == "public":
+            out.append("- Some docs referenced internally are not in the public clone.")
+        else:
+            for g in ignored:
+                out.append(f"- `{g['path']}` — referenced in {g['in']} but **gitignored, not in a clone**")
     return "\n".join(out) if out else _flag("no secondary docs found")
 
 
@@ -254,8 +271,8 @@ def render(facts: dict, authored: dict | None = None, *, exposure: str = "intern
         "what-it-is": _authored(authored, "what-it-is"),
         "maturity": sec_maturity(facts),
         "orientation": _authored(authored, "orientation"),
-        "run-it": sec_run_it(facts, authored),
-        "pointers": sec_pointers(facts),
+        "run-it": sec_run_it(facts, authored, exposure),
+        "pointers": sec_pointers(facts, exposure),
         "codemap": sec_codemap(facts, authored, exposure),
         "landmines": sec_landmines(facts, authored, exposure),
         "first-contribution": _authored(authored, "first-contribution"),
