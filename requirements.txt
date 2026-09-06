@@ -1,0 +1,8 @@
+# Core: extract/author/render/draw need nothing beyond the stdlib
+# (author/vendor_vertex_rest.py is a deliberate stdlib-only Vertex client).
+# review/ is the one module with a real third-party dependency:
+markdown>=3.10
+
+# serve/ (the A2A wrapper) has its own heavier dependency set -- see
+# requirements-serve.txt. Most uses of this repo (extract/author/render/draw)
+# never need it.

@@ -2,6 +2,13 @@
 
 # onboarding-surface
 
+**Experimental, solo-built, no stability guarantees.** This is a personal
+exploration of what a truth-guaranteed onboarding-doc pipeline can look like —
+every module in this repo is real and verified against real repos (see each
+module's own `README.md`), but interfaces, prompts and the spec itself are
+still moving. Not a maintained product; use it as a reference or fork it, but
+don't expect semver or a support channel.
+
 An agent that turns a repository into a **contributor onboarding surface** — the
 docs a new contributor needs to go from `git clone` to a merged first PR, kept
 true as the code changes.
@@ -36,12 +43,11 @@ Each module's own `README.md` has its CLI and what's verified so far.
 `extract` → `author` → `render` → `draw` → `review` → `serve` all built and
 verified on real repos (a2ui-catalogue, maison, onboarding-surface itself).
 `serve` is a real A2A service (`author`/`render`/`draw`/`full` skills) — see
-`serve/README.md`. No CI-formatter GitHub Action yet — see "Where it fits"
-below and `agentic-battle-testing/scripts/onboard.py`, which runs the pipeline
-end-to-end locally against an onboarded repo today.
+`serve/README.md`. No CI-formatter GitHub Action yet.
 
 ## Where it fits
 
-Standalone build repo. Once it's a live A2A agent it gets an entry in
-`agentic-battle-testing`'s Agents inventory; its extracted patterns are harvested
-into that repo's Tools section.
+A standalone build repo — nothing here depends on where it's deployed or used
+from. In the author's own setup it also feeds a separate, private
+experimentation repo that onboards other agents and tools and harvests
+reusable patterns across them; that repo isn't part of this one's contract.

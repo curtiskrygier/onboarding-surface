@@ -293,7 +293,18 @@ def sec_pr_gates(f: dict) -> str:
     if c["cla"]:
         lines.append("- A CLA check is configured.")
     if c["commit_convention"]:
-        lines.append(f"- Commit-message convention: {c['commit_convention']}.")
+        conv = c["commit_convention"]
+        # "house style: ..." (contrib_facts' own weak-signal detector — an
+        # observed pattern in recent commits, e.g. Co-Authored-By trailers)
+        # is NOT the same claim as a verified convention like DCO or
+        # conventional-commits: presenting it under "PR gates" as something a
+        # contributor must do overclaims it into a rule nothing enforces
+        # (Gemini 3.8 Flash review, 2026-09-06, on this repo's own dogfooded
+        # CONTRIBUTING.md: "unless CI actually rejects commits without it").
+        if conv.startswith("house style:"):
+            lines.append(f"- Observed in recent history, not enforced by CI: {conv[len('house style:'):].strip()}.")
+        else:
+            lines.append(f"- Commit-message convention: {conv}.")
     if c["pr_template_fields"]:
         lines.append("- PR template requires: " + ", ".join(c["pr_template_fields"]) + ".")
     not_found = []

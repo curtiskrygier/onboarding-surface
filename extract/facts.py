@@ -225,7 +225,14 @@ def run_facts(repo: Path) -> dict:
         lint = "npm run lint" if "lint" in scripts else None
     if _exists(repo, "requirements.txt") or _exists(repo, "pyproject.toml"):
         install = install or "pip install -r requirements.txt" if _exists(repo, "requirements.txt") else install or "pip install -e ."
-        test = test or ("python3 -m pytest" if _exists(repo, "tests") or _exists(repo, "test") else None)
+        # a root tests/ or test/ dir was the only signal checked -- missed a
+        # perfectly common, pytest-discoverable layout (co-located
+        # test_*.py/*_test.py files per module, no top-level tests/ dir at
+        # all) -- found dogfooding this extractor on onboarding-surface's
+        # own repo, which is laid out exactly that way.
+        has_pytest_files = _exists(repo, "tests") or _exists(repo, "test") or \
+            any(re.search(r"(^|/)(test_[\w-]+|[\w-]+_test)\.py$", f) for f in _tracked_files(repo))
+        test = test or ("python3 -m pytest" if has_pytest_files else None)
 
     services = []
     for fn in ("docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"):

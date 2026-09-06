@@ -1,0 +1,7 @@
+# Only needed to run `python3 -m serve` or its test suite
+# (serve/test_serve.py, python3 -m pytest serve/test_serve.py -q).
+-r requirements.txt
+a2a-sdk>=0.3
+httpx>=0.28
+uvicorn>=0.52
+pytest>=9.0
