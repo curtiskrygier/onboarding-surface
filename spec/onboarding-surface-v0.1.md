@@ -316,17 +316,54 @@ Every landmine record gets a `class`:
 Add to §13 rubric: **No over-exposure** — in `public` mode, zero `exploitable`
 or `private-ref` landmines appear verbatim.
 
-## 16. Later — visuals
+## 16. Visuals (v0.2 candidate — tested 2026-09-06)
 
-Once the spec is stable, the surface should carry diagrams, not just prose:
+Two kinds of picture, two sources. Keep them separate.
 
-- **Deterministic diagrams** from `facts.json` — a module graph and the dynamic
-  path (entry → handler → store) as **Mermaid** (GitHub renders it inline, and it
-  regenerates on the CI-formatter cadence like any other deterministic block).
-- **Illustrative artwork** — a hero visual / a hand-drawn architecture sketch via
-  the **sketch agent** (`a2a_sketch_executor` / `agent_sketchpad`). Distinctive,
-  branded, and a natural fit for the v2 interactive A2UI surface rather than the
-  Markdown exports.
+### 16a. Deterministic diagrams — Mermaid
 
-Keep the split: Mermaid where the picture *is* the facts; the sketch agent where
-the picture is there to make the page inviting.
+A module graph and the dynamic path (entry → handler → store), emitted as
+**Mermaid** from `facts.json`. GitHub renders it inline; it regenerates on the
+CI-formatter cadence like any other deterministic block. This is the *reliable*
+picture — the one that has to be exact.
+
+### 16b. Illustrative sketch — the draw agent (freeform_canvas, one-shot)
+
+An architecture sketch and/or a hero visual via the **draw agent**, using the
+**non-progressive `freeform_canvas` path** (`generate_diagram_payload(prompt,
+mode="svg")`), not the streaming `/a2a/sketch` stroke path — one structured LLM
+call, returns a finished sanitised SVG string, passes the atom's own validator.
+
+**Tested 2026-09-06** on a2ui-catalogue's real codemap facts, `gemini-3.8-flash`:
+one call, ~6 KB SVG, `render_diagram_response` → `accepted: True`; 10 boxes, 10
+connectors, all labels verbatim from the facts (`atoms/schema.yaml`, `generators`,
+`public/`, the runtime pipeline row), coordinates in-bounds, no overlap.
+**Verdict: usable as-is for the architecture sketch.** Artifact:
+`examples/a2ui-catalogue/architecture-sketch.svg`.
+
+**Pipeline placement:**
+
+- An `authored` artifact — LLM output, non-deterministic. Cadence only
+  (merge / label / cron), never per-push, never gated. `mode=check` / `mode=full`
+  don't call it; a `render_art` flag does.
+- **Prompt built from `facts.json`** — the codemap modules + dynamic path. The
+  facts drive both the Mermaid and the sketch, so they can't disagree.
+- **Cache** `art/<name>.svg` + `art/<name>.inputhash`; redraw only when the
+  hash changes materially — otherwise every cadence run burns a call and churns
+  the image.
+- **Exposure inherits** (§15): a box that would carry a `private-ref` label →
+  generalise the *prompt* in `public` mode. Don't ask it to draw what you
+  wouldn't write.
+- **Model:** `freeform_canvas` defaults to `gemini-3.7-flash`; the test used
+  `3.8-flash` and it laid out cleanly. That's the draw service's config to set,
+  not this agent's concern.
+
+**Where it lands:**
+
+- Markdown exports: write `assets/onboarding/architecture-sketch.svg`, reference
+  as `![](…)` — GitHub renders SVG images.
+- v2 interactive A2UI surface: an `agent_sketchpad` / `freeform_canvas` atom
+  pre-loaded with the SVG.
+
+Split rule: **Mermaid where the picture *is* the facts; the draw agent where the
+picture is there to make the page inviting.**
