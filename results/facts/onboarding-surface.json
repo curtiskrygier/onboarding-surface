@@ -1,0 +1,105 @@
+{
+  "_generated_at": "2026-09-06T14:12:37+00:00",
+  "_repo_path": "/home/curtis/onboarding-surface",
+  "_github": false,
+  "repo": {
+    "name": "onboarding-surface",
+    "remote": "https://github.com/curtiskrygier/onboarding-surface.git",
+    "default_branch": "main",
+    "description": null,
+    "topics": null,
+    "license": null,
+    "archived": null
+  },
+  "activity": {
+    "last_commit_at": "2026-09-06T16:06:28+02:00",
+    "commits_90d": 8,
+    "tags": [],
+    "latest_tag": null,
+    "latest_release_is_semver": false,
+    "tag_cadence_days": null,
+    "ci_present": false,
+    "ci_workflows": [],
+    "ci_status": null
+  },
+  "structure": {
+    "file_count": 12,
+    "generated_file_count": 0,
+    "top_dirs": {
+      "examples": 6,
+      "(root)": 2,
+      "assets": 2,
+      "docs": 1,
+      "spec": 1
+    },
+    "languages": {
+      "Markdown": 8
+    },
+    "primary_language": "Markdown",
+    "entrypoints": [],
+    "modules": []
+  },
+  "run": {
+    "install_cmd": null,
+    "run_cmd": null,
+    "test_cmd": null,
+    "lint_cmd": null,
+    "make_targets": [],
+    "setup_targets": [],
+    "services": [],
+    "env_var_names": [],
+    "tool_versions": {},
+    "migration_dirs": [],
+    "needs_node_binary": false
+  },
+  "invariants": {
+    "config_files": [],
+    "boundary_rules": [],
+    "go_internal_pkgs": []
+  },
+  "history": {
+    "revert_commits": [
+      "da6772a Scaffold + spec v0.1: contributor onboarding surface agent"
+    ],
+    "churn_by_dir": {
+      "examples": 8,
+      "spec": 5,
+      "(root)": 3,
+      "assets": 2,
+      "docs": 1
+    },
+    "review_comment_hits": null
+  },
+  "contrib": {
+    "has_contributing_md": false,
+    "cla": false,
+    "dco": false,
+    "commit_convention": null,
+    "pr_template_fields": null,
+    "branch_rules": null,
+    "required_checks": null
+  },
+  "docs": {
+    "readme_sections": [
+      "onboarding-surface",
+      "The one rule",
+      "How it's structured",
+      "Status",
+      "Where it fits"
+    ],
+    "readme_len": 1436,
+    "has_architecture_md": false,
+    "has_contributing_md": false,
+    "agent_docs": [],
+    "doc_dirs": [
+      "docs"
+    ],
+    "spec_dir": true
+  },
+  "clone_gaps": [],
+  "sibling_repos": [],
+  "repo_kind": "docs",
+  "issues": {
+    "starter_candidates": null
+  }
+}

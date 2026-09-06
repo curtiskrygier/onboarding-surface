@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .env
 ops/log.jsonl
+# results/facts/*.json kept as regression fixtures; other run output ignored
