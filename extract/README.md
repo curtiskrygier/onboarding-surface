@@ -24,7 +24,11 @@ python3 -m extract <repo-path> --github        # + starter issues / review minin
   method) — a small denylist would clean it.
 - `repo_kind` for a repo that *ships* a service as one component vs *is* a
   service leans on `ops/ops.py + project.yaml` as the toolkit tie-breaker.
-- `description` / `topics` / `ci_status` / `branch_rules` / `starter_candidates`
-  are GitHub-only → `null` offline, by design.
+- `--github` fills `description` / `topics` / `archived` / `ci_status` /
+  `branch_rules` / `required_checks` / `starter_candidates` and mines closed-PR
+  review comments for landmine phrases (a spec §6 source). Best-effort per call;
+  `_github_partial` records anything that didn't fetch. Measured effect: with the
+  real `description` fed in, `author`'s `what-it-is` goes from vague to naming
+  the surfaces + "MCP server" + "no signup".
 - `commit_convention` detects conventional-commits + config files; the
   `ops.py commit` / `Co-Authored-By` / `#NN` house style shows as `null`.

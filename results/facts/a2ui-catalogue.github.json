@@ -1,0 +1,257 @@
+{
+  "_generated_at": "2026-09-06T14:21:15+00:00",
+  "_repo_path": "/home/curtis/gemini/a2ui-catalogue",
+  "_github": true,
+  "repo": {
+    "name": "a2ui",
+    "remote": "git@github.com:a2uicatalog/a2ui.git",
+    "default_branch": "main",
+    "description": "Typed UI vocabulary for AI agents using the a2ui protocol  \u2014 474 atoms an agent composes into real rendered interfaces across web, Google Meet, Apps Script, Google Chat and MCP Apps. MCP server, no signup.",
+    "topics": [
+      "a2ui",
+      "agent",
+      "agent-skills",
+      "ai-agents",
+      "apps-script",
+      "claude",
+      "generative-ui",
+      "mcp",
+      "mcp-apps",
+      "mcp-server"
+    ],
+    "license": "MIT",
+    "archived": false
+  },
+  "activity": {
+    "last_commit_at": "2026-09-06T14:29:16+02:00",
+    "commits_90d": 479,
+    "tags": [
+      "topic-c-merged-2026-08-25",
+      "v1.0.2",
+      "v1.0.1",
+      "v1.0.0"
+    ],
+    "latest_tag": "v1.0.2",
+    "latest_release_is_semver": true,
+    "tag_cadence_days": 1.0,
+    "ci_present": true,
+    "ci_workflows": [
+      "build-apps.yml",
+      "deploy.yml",
+      "gemini-review.yml",
+      "release-renderer.yml"
+    ],
+    "ci_status": "success"
+  },
+  "structure": {
+    "file_count": 1869,
+    "generated_file_count": 1201,
+    "top_dirs": {
+      "public": 1201,
+      "apps-script-surface": 252,
+      "tests": 63,
+      "scripts": 60,
+      "payloads": 47,
+      "knowledge-catalogue": 29,
+      "(root)": 24,
+      "renderers": 23,
+      "atoms": 20,
+      "components": 16,
+      "mcp": 16,
+      "examples": 14,
+      "sampledocs": 14,
+      "spec": 12,
+      "vendors": 12,
+      "a2a_counterpart": 8,
+      "cloud-run-renderer": 8,
+      "articles": 6,
+      "molecules": 6,
+      "prompts": 6,
+      "runbooks": 6,
+      ".github": 5,
+      "assets": 4,
+      "benchmarks": 3,
+      "docs": 3,
+      "skills": 3,
+      "tests-js": 3,
+      "googlechat": 2,
+      ".claude": 1,
+      "a2h-printer": 1
+    },
+    "languages": {
+      "Python": 135,
+      "Markdown": 133,
+      "Apps Script": 98,
+      "JSON": 81,
+      "JavaScript": 78,
+      "HTML": 44,
+      "YAML": 28,
+      "TypeScript": 15,
+      "Shell": 3
+    },
+    "primary_language": "Python",
+    "entrypoints": [
+      "a2a_counterpart/main.py",
+      "cloud-run-renderer/server.py"
+    ],
+    "modules": [
+      "a2a_counterpart",
+      "apps-script-surface",
+      "benchmarks",
+      "cloud-run-renderer",
+      "components",
+      "examples",
+      "googlechat",
+      "knowledge-catalogue",
+      "molecules",
+      "renderers",
+      "scripts",
+      "spec",
+      "src",
+      "tests",
+      "tests-js"
+    ]
+  },
+  "run": {
+    "install_cmd": "pip install -r requirements.txt",
+    "run_cmd": null,
+    "test_cmd": "python3 -m pytest",
+    "lint_cmd": null,
+    "make_targets": [],
+    "setup_targets": [],
+    "services": [],
+    "env_var_names": [],
+    "tool_versions": {},
+    "migration_dirs": [],
+    "needs_node_binary": true
+  },
+  "invariants": {
+    "config_files": [],
+    "boundary_rules": [],
+    "go_internal_pkgs": []
+  },
+  "history": {
+    "revert_commits": [
+      "28c95836 Refresh stale generated agent-facing docs (#52)",
+      "d1e48a3d Add orphaned-component-update warning (Gemini's DX recommendation on agent_sketchpad)",
+      "f167f7eb Add agent_sketchpad: a new real catalogue atom for progressive multi-stroke drawing over real streaming updates",
+      "76d32b59 Add Topic C, Phase 5.3: map updateComponents text to TextMessageStart/Content/End",
+      "f9127af7 Add Topic C, Phase 5.1-5.2: package agui_adapter.py, map updateDataModel -> StateDelta",
+      "54b11217 Add Topic C, Phases 3-4: render derived state to HTML, then feed a real AG-UI live-atoms runtime from real A2A traffic",
+      "cffb235b Add Topic C, Phase 2: expose derived surface state back over A2A (local only)",
+      "47ab2493 Add Topic C, Phase 1: real multi-turn derived state over A2A (local only)",
+      "07975c10 Add mcp-apps renderer for freeform_canvas (#34)",
+      "ac0ee037 Fix GAS-side createSurface decode/render drift (Topic A)",
+      "37bee5c5 Add real jsonschema conformance tests against the current A2UI v1.0 spec",
+      "f1c81ba5 photo_grid/photo_stepper: no broken-image icon when a candidate has no photo"
+    ],
+    "churn_by_dir": {
+      "a2h-printer": 150,
+      "scripts": 113,
+      "apps-script-surface": 109,
+      "tests": 82,
+      "(root)": 64,
+      "atoms": 62,
+      "cloud-run-renderer": 45,
+      "mcp": 33,
+      "renderers": 27,
+      "a2a_counterpart": 21,
+      "tests-js": 17,
+      ".github": 15
+    },
+    "review_comment_hits": []
+  },
+  "contrib": {
+    "has_contributing_md": false,
+    "cla": false,
+    "dco": false,
+    "commit_convention": null,
+    "pr_template_fields": null,
+    "branch_rules": "no branch protection on the default branch",
+    "required_checks": null
+  },
+  "docs": {
+    "readme_sections": [
+      "The idea",
+      "Connect an agent",
+      "Google Apps Script renderer \u2014 try it live",
+      "What's in the GAS renderer",
+      "Deploy your own renderer (recommended)",
+      "\u2192 Your renderer is live at https://script.google.com/macros/s/YOUR_ID/exec",
+      "What's in this repo",
+      "450+ atoms across 8 surfaces",
+      "Surface compatibility",
+      "Vendor landscape",
+      "Using this vocabulary",
+      "On the name",
+      "Related work",
+      "License"
+    ],
+    "readme_len": 68968,
+    "has_architecture_md": false,
+    "has_contributing_md": false,
+    "agent_docs": [
+      "CLAUDE.md",
+      "AGENTS.md",
+      "GEMINI.md"
+    ],
+    "doc_dirs": [
+      "docs"
+    ],
+    "spec_dir": true
+  },
+  "clone_gaps": [
+    {
+      "path": "**/Code.private.gs",
+      "in": "CLAUDE.md",
+      "why": "absent"
+    },
+    {
+      "path": "clasp.json",
+      "in": "CLAUDE.md",
+      "why": "absent"
+    },
+    {
+      "path": "tools/list",
+      "in": "CLAUDE.md",
+      "why": "absent"
+    },
+    {
+      "path": "mcp-worker/src/tools.js",
+      "in": "CLAUDE.md",
+      "why": "absent"
+    },
+    {
+      "path": "test-workspace-verb-parity.mjs",
+      "in": "CLAUDE.md",
+      "why": "absent"
+    },
+    {
+      "path": "a2uithoughts.md",
+      "in": "CLAUDE.md",
+      "why": "gitignored"
+    },
+    {
+      "path": "improve.yaml",
+      "in": "AGENTS.md",
+      "why": "gitignored"
+    },
+    {
+      "path": "ops.py",
+      "in": "AGENTS.md",
+      "why": "absent"
+    },
+    {
+      "path": "github/workflows/deploy-full-catalog.yml",
+      "in": "AGENTS.md",
+      "why": "absent"
+    }
+  ],
+  "sibling_repos": [
+    "a2ui-private"
+  ],
+  "repo_kind": "toolkit",
+  "issues": {
+    "starter_candidates": []
+  }
+}
