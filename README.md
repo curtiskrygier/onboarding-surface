@@ -53,3 +53,36 @@ A standalone build repo — nothing here depends on where it's deployed or used
 from. In the author's own setup it also feeds a separate, private
 experimentation repo that onboards other agents and tools and harvests
 reusable patterns across them; that repo isn't part of this one's contract.
+
+<!-- onboarding-surface:begin what-it-is -->
+<!-- authored: pending — run `python3 -m author` -->
+<!-- onboarding-surface:end what-it-is -->
+
+<!-- onboarding-surface:begin maturity -->
+quiet — a few commits in the last 90 days; CI: docs.yml.
+<!-- onboarding-surface:end maturity -->
+
+<!-- onboarding-surface:begin orientation -->
+<!-- authored: pending — run `python3 -m author` -->
+<!-- onboarding-surface:end orientation -->
+
+<!-- onboarding-surface:begin run-it -->
+This repo is a **toolkit** — there is no server to start. "Running it" means the build/test pipeline below.
+
+**System prerequisites:** `python` 3.11.
+
+**Environment:** none declared.
+
+```
+pip install -r requirements.txt
+```
+
+Test: `python3 -m pytest`
+<!-- onboarding-surface:end run-it -->
+
+<!-- onboarding-surface:begin pointers -->
+- `ARCHITECTURE.md` — the codemap and landmines
+- `CONTRIBUTING.md` — how to get a PR merged
+- `spec/` — internal contracts
+- `docs/` — deeper docs
+<!-- onboarding-surface:end pointers -->
