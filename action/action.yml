@@ -1,0 +1,71 @@
+name: 'onboarding-surface'
+description: >-
+  Contributor onboarding docs, kept true as the code changes. mode=check
+  regenerates only the deterministic sections and commits them into the same
+  push (formatter, not gate — never fails). mode=full also runs the governed
+  LLM author step and opens one PR. See action/README.md.
+branding:
+  icon: 'file-text'
+  color: 'blue'
+
+inputs:
+  mode:
+    description: 'check (deterministic sections, same-push commit) or full (+ author, opens one PR)'
+    required: true
+  exposure:
+    description: 'internal (full candour) or public (generalise private-refs, hold exploitable/private-ref landmines to MAINTAINER-NOTES.md)'
+    required: false
+    default: 'internal'
+  art:
+    description: 'also generate the architecture sketch (D2, deterministic, no LLM)'
+    required: false
+    default: 'false'
+  gemini-api-key:
+    description: 'MAISON_GEMINI_API_KEY — required when mode=full, unused for mode=check'
+    required: false
+    default: ''
+  github-token:
+    description: 'Token used to commit (mode=check) or open a PR (mode=full). Needs contents:write (+ pull-requests:write for mode=full).'
+    required: false
+    default: ${{ github.token }}
+  github-adapter:
+    description: 'Pass --github to extract (starter issues, review-mined landmines, live repo metadata) — uses github-token'
+    required: false
+    default: 'true'
+
+outputs:
+  changed:
+    description: '"true" if any doc content changed'
+    value: ${{ steps.run.outputs.changed }}
+  pr-url:
+    description: 'The opened/updated PR URL (mode=full only, empty otherwise)'
+    value: ${{ steps.run.outputs.pr-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install onboarding-surface's own dependencies
+      shell: bash
+      run: |
+        pip install -q -r "${{ github.action_path }}/../requirements.txt"
+        if [ "${{ inputs.mode }}" = "full" ]; then
+          pip install -q -r "${{ github.action_path }}/../requirements-serve.txt" 2>/dev/null || true
+        fi
+
+    - name: Run the pipeline (never fails the build)
+      id: run
+      shell: bash
+      env:
+        PYTHONPATH: ${{ github.action_path }}/..
+        MAISON_GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        ONBOARDING_SURFACE_MODE: ${{ inputs.mode }}
+        ONBOARDING_SURFACE_EXPOSURE: ${{ inputs.exposure }}
+        ONBOARDING_SURFACE_ART: ${{ inputs.art }}
+        ONBOARDING_SURFACE_GITHUB_ADAPTER: ${{ inputs.github-adapter }}
+      run: bash "${{ github.action_path }}/run.sh"

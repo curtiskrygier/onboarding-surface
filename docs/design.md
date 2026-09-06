@@ -93,4 +93,4 @@ A composite GitHub Action, `curtiskrygier/onboarding-surface@v1`:
    (LLM, human-gated). Not in the original build order — added once the
    visuals work (spec §16) proved worth doing. **Built.**
 5. `serve` — the A2A wrapper. **Built** (this doc, above).
-6. `action` — the CI composite. Not yet built.
+6. `action` — the CI composite. **Built.** See `action/README.md`.

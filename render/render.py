@@ -42,13 +42,35 @@ def _authored(records: dict, name: str, *, fallback: str | None = None) -> str:
 
 
 # ── deterministic section renderers ─────────────────────────────────────────
+def _rounded_commit_count(n: int) -> str:
+    """A CI-as-formatter that splices this text and diffs its own output
+    (spec §11: commit into the same push, never a required check) would
+    otherwise churn a commit on every single push forever -- an exact count
+    shifts by at least one on every commit, including the formatter's own,
+    at ANY repo size, not just large ones. Bucket into a coarse band instead
+    of rounding a small exact number (rounding still increments by 1 every
+    commit below the rounding granularity). Still informative, converges
+    instead of drifting forever. Found running `action/` against a real
+    scratch repo, 2026-09-06 -- consecutive runs each found a "change" for
+    no reason but the previous run's own commit, at counts as low as 2-4."""
+    if n == 0:
+        return "no"
+    if n < 6:
+        return "a few"
+    if n < 15:
+        return "some"
+    if n < 100:
+        return f"~{round(n / 10) * 10}"
+    return f"~{round(n / 25) * 25}"
+
+
 def sec_maturity(f: dict) -> str:
     a = f["activity"]
     bits = []
     if a["commits_90d"] is not None:
         pace = ("near-daily" if a["commits_90d"] > 60 else
                 "active" if a["commits_90d"] > 10 else "quiet")
-        bits.append(f"{pace} — {a['commits_90d']} commits in the last 90 days")
+        bits.append(f"{pace} — {_rounded_commit_count(a['commits_90d'])} commits in the last 90 days")
     if a["latest_tag"]:
         tag = a["latest_tag"]
         bits.append(f"latest release `{tag}`" if a.get("latest_release_is_semver")

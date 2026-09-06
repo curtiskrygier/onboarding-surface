@@ -217,18 +217,40 @@ structure before anything is written.
 
 ---
 
-## 11. CI integration — formatter, not gate
+## 11. CI integration — formatter, not gate — **built** (`action/`, 2026-09-06)
 
-- **Every push, doc-relevant paths changed:** regenerate the **deterministic**
-  sections, write them between their markers, and **amend into the same push**
-  (like `prettier --write` in CI). No failing check. If the runner can't push
-  (fork PR), post the diff as a review comment instead.
-- **Merge to main / `docs:refresh` label / weekly cron:** run the authored call
-  too; open **one** PR with the combined update. Never one PR per merge.
-- **Never** a required status check on doc content.
+A composite GitHub Action (`action/action.yml` + `action/run.sh`), matching
+the design below exactly:
 
-"doc-relevant paths" = a configurable glob: manifests, CI config, `docs/`,
-lint configs, `.github/`, `ARCHITECTURE.md`, top-level source dirs. Not every typo.
+- **`mode: check`** (call on push, gated on doc-relevant paths by the
+  *consuming* workflow's own `on: push: paths:` — this action doesn't
+  second-guess that filter itself): regenerate the **deterministic**
+  sections, write them between their markers, and **commit into the same
+  push** (like `prettier --write` in CI). No failing check — every error path
+  is a `::warning::` and a clean exit, never a non-zero status. On a fork PR
+  (can't push), posts the diff as a `::notice::` instead of failing.
+- **`mode: full`** (call on a schedule / merge / label, per the consumer's own
+  workflow trigger): also runs `author` (needs `gemini-api-key`), optionally
+  `draw architecture` (`art: true`); opens **one** PR (`onboarding-surface/
+  docs-refresh`), updating the same PR on re-run rather than opening another.
+- **Never** a required status check on doc content — the action has no
+  concept of failing the calling job over doc drift.
+
+"Doc-relevant paths" stays the *consumer's* `on.push.paths` glob, not
+something this action tries to infer — it only runs when called.
+
+**A real bug the build surfaced:** `sec_maturity`'s exact commit count meant a
+formatter that diffs and commits its own output would never converge — its
+own commit shifts the count, so the next run always finds a "change." Fixed
+in `render/render.py` (`_rounded_commit_count`): bucketed instead of exact
+("a few" / "some" / "~40" / …). Verified: two consecutive runs converge to
+`changed=false` and stay there.
+
+**Cross-account note (§ from the public/private discussion, 2026-09-06):**
+this is exactly why `onboarding-surface` needed to go public — a GitHub
+Action `uses:` reference only resolves across accounts when the referenced
+repo is public. `serve/` (§12) exists as the alternative for a caller who'd
+rather not add a `uses:` dependency at all, or whose repo can't take one.
 
 ---
 
