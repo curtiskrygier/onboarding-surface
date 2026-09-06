@@ -21,6 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: curtiskrygier/onboarding-surface@v1
+      - uses: curtiskrygier/onboarding-surface/action@v1
         with:
           mode: check

@@ -34,7 +34,7 @@ verifiable, or explicitly marked *authored, unverified*.
 | `draw/` | §16b/§16c — the architecture sketch (D2, deterministic, cadence-only) and repo-mark proposals (LLM, human-gated). |
 | `review/` | The HITL review page — read-only, no approve/reject gate. |
 | `serve/` | Step 5, §12 — the A2A wrapper: `author`/`render`/`draw`/`full` as remote skills. Stateless, repo-blind. |
-| `action/` | Step 6, §11 — the CI adapter: `uses: curtiskrygier/onboarding-surface@v1` in a consuming repo's own workflow. Formatter, not gate. |
+| `action/` | Step 6, §11 — the CI adapter: `uses: curtiskrygier/onboarding-surface/action@v1` in a consuming repo's own workflow. Formatter, not gate. |
 | `examples/` | The original hand-worked surface that pressure-tested the spec before any code existed. |
 
 Each module's own `README.md` has its CLI and what's verified so far.

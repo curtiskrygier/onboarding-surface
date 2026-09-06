@@ -62,7 +62,7 @@ addition and is not in the request path.
 
 ## CI adapter
 
-A composite GitHub Action, `curtiskrygier/onboarding-surface@v1`:
+A composite GitHub Action, `curtiskrygier/onboarding-surface/action@v1`:
 
 - **push, doc-relevant paths:** calls `mode=check`, writes the deterministic
   marker blocks, `git commit --amend`-style adds them to the push (or, on a

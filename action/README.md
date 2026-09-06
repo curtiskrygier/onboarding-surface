@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: curtiskrygier/onboarding-surface@v1
+      - uses: curtiskrygier/onboarding-surface/action@v1
         with:
           mode: check
 
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: curtiskrygier/onboarding-surface@v1
+      - uses: curtiskrygier/onboarding-surface/action@v1
         with:
           mode: full
           gemini-api-key: ${{ secrets.MAISON_GEMINI_API_KEY }}
