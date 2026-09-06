@@ -5,6 +5,22 @@
 ## The map
 
 <!-- onboarding-surface:begin codemap -->
+![Architecture sketch — build flow (schema.yaml → generators → public/) top, runtime pipeline (agent → MCP → payload → renderer → surface) bottom](architecture-sketch.svg)
+
+*Orientation only — draw-agent output, regenerated on the docs cadence. The
+precise version:*
+
+```mermaid
+flowchart TD
+  schema["atoms/schema.yaml<br/>source of truth"] -->|read by| gen["scripts/gen_*.py"]
+  gen -->|write| pub["public/<br/>spec.json, atom pages, MCP bundle"]
+  pub -->|deploy on merge| live["a2uicatalog.ai + /mcp"]
+  schema -.->|compiled into| rend["renderers/a2ui_v1.py<br/>+ .gs / MCP-Apps mirrors"]
+  agent["AI agent"] -->|tools/list| live
+  agent -->|A2UI payload| rend
+  rend -->|markup| surf["web · Meet · Chat · Slack"]
+```
+
 Coarse — where things live, and the entity to grep for. No line links.
 
 | Area | What it does | Grep for |

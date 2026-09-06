@@ -336,10 +336,30 @@ call, returns a finished sanitised SVG string, passes the atom's own validator.
 
 **Tested 2026-09-06** on a2ui-catalogue's real codemap facts, `gemini-3.8-flash`:
 one call, ~6 KB SVG, `render_diagram_response` → `accepted: True`; 10 boxes, 10
-connectors, all labels verbatim from the facts (`atoms/schema.yaml`, `generators`,
-`public/`, the runtime pipeline row), coordinates in-bounds, no overlap.
-**Verdict: usable as-is for the architecture sketch.** Artifact:
-`examples/a2ui-catalogue/architecture-sketch.svg`.
+connectors, all labels verbatim from the facts, correct two-zone layout (build
+flow top-to-bottom, runtime flow left-to-right). **Usable, but cramped** — 800×520
+for 10 boxes, 10.5px text, zones not visually separated, dead space between them.
+Artifact: `examples/a2ui-catalogue/architecture-sketch.svg`.
+
+**Prompt guidance** (the draw agent gets this, built by onboarding-surface):
+
+- **Structured input, not prose.** Pass the box list, edge list (with relation
+  labels), and zone grouping from `facts.json`. The model does *layout*; it does
+  not invent content. This also keeps the exposure filter (§15) clean — the label
+  strings are yours.
+- **Generous canvas:** `viewBox 0 0 1100 700`, boxes ≥ 160×64, text ≥ 12px. A box
+  needing >3 lines gets bigger, not smaller text.
+- **Zones:** each distinct flow in its own horizontal band with a faint
+  background rect + a band title; clear whitespace between bands; bridge them with
+  a labelled connector (no dead space).
+- **Direction per zone:** build/author flows top→bottom, runtime/request flows
+  left→right.
+- **Label the arrows** where the relation isn't obvious ("generates", "deployed
+  by CI", "emits").
+- **Detail knob:** `overview` (≤10 boxes, the shape — default) or `detailed`
+  (expand key nodes: renderer variants, generated artifacts, CI, private tier —
+  use for ARCHITECTURE.md).
+- One accent colour for the entry node; legend only if >2 fills.
 
 **Pipeline placement:**
 
@@ -360,8 +380,16 @@ connectors, all labels verbatim from the facts (`atoms/schema.yaml`, `generators
 
 **Where it lands:**
 
-- Markdown exports: write `assets/onboarding/architecture-sketch.svg`, reference
-  as `![](…)` — GitHub renders SVG images.
+- **`ARCHITECTURE.md`, not `README.md`.** A marketing README's visual should be a
+  product shot (the rendered UI the tool produces), not an internal diagram —
+  those read as "enterprise vendor" on a landing page. `ARCHITECTURE.md` is the
+  reader who wants it: someone about to change code.
+- Embed as `![](assets/onboarding/architecture-sketch.svg)` at the top of §5
+  "The map", with the **Mermaid module-graph directly below it**: sketch for
+  orientation, Mermaid for the precise reference.
+- The sketch's labels pass the same `public` / `internal` exposure filter (§15)
+  as the prose — an `internal` sketch may label `ops/ (private tier)`; a `public`
+  one may not.
 - v2 interactive A2UI surface: an `agent_sketchpad` / `freeform_canvas` atom
   pre-loaded with the SVG.
 
