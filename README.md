@@ -47,16 +47,15 @@ experimentation repo that onboards other agents and tools and harvests
 reusable patterns across them; that repo isn't part of this one's contract.
 
 <!-- onboarding-surface:begin what-it-is -->
-onboarding-surface is a truth-guaranteed contributor onboarding documentation pipeline that derives verified documentation from a repository. It is designed for maintainers and developers who require contributor documentation—such as README, ARCHITECTURE, and CONTRIBUTING files—generated without fabricated setup commands or unverified claims.
+<!-- authored: pending — run `python3 -m author` -->
 <!-- onboarding-surface:end what-it-is -->
 
 <!-- onboarding-surface:begin maturity -->
-active — ~20 commits in the last 90 days; latest release `v1.0.0`; CI: docs.yml.
+quiet — a few commits in the last 90 days; CI: docs.yml.
 <!-- onboarding-surface:end maturity -->
 
 <!-- onboarding-surface:begin orientation -->
-The essential mental model is a strict, staged pipeline where deterministic fact extraction strictly precedes authored prose: repository facts are collected into `facts.json`, governed prose is authored under an anti-fabrication contract, and markdown documentation is rendered without guessing absent values.
-The project exists to provide contributor documentation that remains provably accurate as code evolves.
+<!-- authored: pending — run `python3 -m author` -->
 <!-- onboarding-surface:end orientation -->
 
 <!-- onboarding-surface:begin run-it -->
