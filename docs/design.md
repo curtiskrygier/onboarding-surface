@@ -3,24 +3,48 @@
 Companion to `spec/onboarding-surface-v0.1.md` §11–12. This is the *how it runs*,
 kept separate from the *what it produces*.
 
-## Shape
+## Shape — as built (`serve/`, 2026-09-06)
 
-A small Cloud Run service (same pattern as `maison`): a stateless HTTP handler
-that runs the pipeline once per call.
+**Revised from this doc's original sketch below** (kept for the record): the
+original had the service run `extract` itself over a caller-bundled raw file
+slice. `extract` as actually built (step 1, below) is a `git`-checkout tool —
+`git ls-files`, `git log` for history/contrib facts — reimplementing that
+against an uploaded bundle would duplicate the logic for a shakier input, and
+(Gemini 3.8 Flash design review, 2026-09-06) reopens exactly the security
+surface a stateless, repo-blind server was meant to avoid: SSRF via clone,
+credential delegation, disk cleanup.
 
 ```
-request  ──▶  extract facts.json (deterministic)
-         ──▶  if mode=full: one governed LLM call → authored section records
-         ──▶  deterministic parse + validate against spec §3.1
-         ──▶  render Markdown (marker blocks) + facts.json + report
-response ◀──  A2A task result: artifacts[ README.md, ARCHITECTURE.md,
-              CONTRIBUTING.md, facts.json, report.json ]
+CALLER (has the git checkout)         SERVICE (repo-blind, stateless)
+  extract  → facts.json          ──▶  author  → authored prose + landmines
+  build_digest → digest text          render  → README/ARCHITECTURE/
+  (both local, no network)                      CONTRIBUTING(+MAINTAINER-NOTES)
+                                       draw    → architecture-sketch SVG (D2,
+                                                 no LLM)
+                                 ◀──  one A2A DataPart reply per job
 ```
+
+Four skills (`author`, `render`, `draw`, `full`), not one `mode=check|full`
+call — see spec §12 for why (proxy/client timeouts on a 60-90s batched call).
+`render` always runs `--fresh` — no target repo here to splice into.
 
 No database. The "document that learns" analytics store is a later, optional
 addition and is not in the request path.
 
-## A2A endpoint
+## A2A endpoint — as built
+
+- `GET /.well-known/agent-card.json` — public (unless `ONBOARDING_SURFACE_TOKEN`
+  is set). Skills: `author`, `render`, `draw`, `full`.
+- `POST /` — `message/send`. One `DataPart`: `{job, facts, digest?, authored?,
+  exposure?, model?, detail?}` in; one `DataPart` reply out.
+- The caller sends `facts.json` (+ an optional digest string) — never the repo
+  itself, never credentials. See `serve/README.md` for the exact contract and
+  a runnable client example.
+- History-dependent sections (§6 review comments, §7 starter issues) already
+  come from `extract --github`, which runs locally alongside everything else
+  — no separate token-passing scheme needed at the A2A boundary.
+
+## Original sketch, superseded above
 
 - `GET /.well-known/agent-card.json` — public. One skill:
   `generate-onboarding-surface`.
@@ -51,18 +75,22 @@ A composite GitHub Action, `curtiskrygier/onboarding-surface@v1`:
 ## Hosting / infra
 
 - Cloud Run service `onboarding-surface`, project + region TBD (co-locate with
-  the LLM region).
-- LLM: Gemini via Vertex Express (`vendor_vertex_rest.py` pattern), or Claude —
-  decide at build. `mode=check` makes no LLM call.
-- CI for this repo dogfoods the Action on itself.
+  the LLM region). `render`/`draw:architecture` make no LLM call either way —
+  only `author`/`draw:mark`/`full` need `MAISON_GEMINI_API_KEY` configured.
+- LLM: Gemini via Vertex Express (`author/vendor_vertex_rest.py` pattern).
+- `draw`'s architecture job needs the `d2` CLI on the service's image/PATH.
+- CI for this repo dogfoods the Action on itself (once `action` is built).
 
 ## Build order
 
 1. `extract` — `facts.json` from a local repo path. No network, no LLM. Testable
-   against this repo + a2ui-catalogue + maison.
+   against this repo + a2ui-catalogue + maison. **Built.**
 2. `render` — `facts.json` + authored records → the three Markdown files. Authored
-   records hand-written first, to lock the format.
+   records hand-written first, to lock the format. **Built.**
 3. `author` — the one governed LLM call producing the records. Prompt generated
-   from the spec.
-4. `serve` — the A2A wrapper.
-5. `action` — the CI composite.
+   from the spec. **Built.**
+4. `draw` — the architecture sketch (D2, deterministic) + repo-mark proposals
+   (LLM, human-gated). Not in the original build order — added once the
+   visuals work (spec §16) proved worth doing. **Built.**
+5. `serve` — the A2A wrapper. **Built** (this doc, above).
+6. `action` — the CI composite. Not yet built.

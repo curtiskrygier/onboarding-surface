@@ -232,14 +232,47 @@ lint configs, `.github/`, `ARCHITECTURE.md`, top-level source dirs. Not every ty
 
 ---
 
-## 12. A2A interface (summary — full shape in `docs/design.md`)
+## 12. A2A interface — **built 2026-09-06** (`serve/`, full shape in `docs/design.md`)
 
-- `GET /.well-known/agent-card.json` — skills: `generate-onboarding-surface`
-  (returns all three files + `facts.json` + report). Input modes: file parts
-  (the doc-relevant repo slice) + a `mode` text part (`check` = deterministic
-  only, `full` = + authored).
-- `POST /` — `message/send`. Stateless: repo slice in, surface out.
-- Auth: bearer token or Google OIDC (for GitHub Actions with WIF).
+**Revised from the original sketch below** (kept struck-through-in-spirit for
+the record): that design had the server run `extract` itself over a caller-
+bundled raw file slice. `extract` as actually built is a `git`-checkout tool —
+reimplementing it against an uploaded bundle would duplicate that logic for a
+shakier input, and (Gemini 3.8 Flash design review, 2026-09-06) reopens the
+security surface a stateless, repo-blind server was meant to avoid. As built:
+
+- `GET /.well-known/agent-card.json` — four skills: `author`, `render`,
+  `draw`, `full` (chains all three). Split rather than one `mode=check|full`
+  call — batching two LLM steps into one sync HTTP round trip is fragile
+  under proxy/client timeouts (60–90s for `full`); a caller who hasn't sized
+  their own timeouts for that should call the individual skills instead.
+- `POST /` — `message/send`. One `DataPart`: `{job, facts, digest?, authored?,
+  exposure?, model?, detail?}` in; one `DataPart` reply: `{docs?, authored?,
+  sketch_svg?}` out. Stateless — no Task lifecycle, no memory between calls.
+- **The caller runs `extract` locally** (already its whole contract — needs
+  `git`) and sends the resulting `facts.json`, plus an optional
+  `author.build_digest()` string for the `author`/`full` skills. The server
+  never clones, never reads a caller's filesystem, never sees credentials.
+- `render` always runs `--fresh` server-side — there's no target repo here to
+  splice into; splicing is trivially the caller's own job.
+- Auth: a static bearer token (`ONBOARDING_SURFACE_TOKEN`, no-op when unset)
+  — proportionate for a solo repo per the same review; OAuth/OIDC and rate
+  limiting explicitly deferred. A 512 KB payload cap rejects an oversized
+  request before it's parsed.
+
+Verified in-process (`serve/test_serve.py`, real `a2a-sdk` client + server,
+`httpx.ASGITransport`): `render` and `draw` round-trip correctly, the public
+exposure filter holds identically to the CLI, error paths (missing `facts`,
+oversized payload, no auth) reply cleanly. `author`/`full` verified manually
+(real API cost) against `a2ui-catalogue`'s real facts — public exposure held
+end to end from a single A2A call.
+
+**Original v0.1 sketch, superseded above:** `GET /.well-known/agent-card.json`
+— skill `generate-onboarding-surface` (returns all three files + `facts.json`
++ report); input modes: file parts (the doc-relevant repo slice) + a `mode`
+text part (`check` = deterministic only, `full` = + authored). `POST /` —
+`message/send`, repo slice in, surface out. Auth: bearer token or Google OIDC
+(for GitHub Actions with WIF).
 
 ---
 

@@ -61,7 +61,12 @@ _EXPOSURE_PUBLIC = """- EXPOSURE = public. In EVERY section: never name a privat
   non-operational ones); write operational ones already generalised."""
 
 
-def _digest(repo: Path, facts: dict, *, max_doc=14000) -> str:
+def build_digest(repo: Path, facts: dict, *, max_doc=14000) -> str:
+    """The repo-text half of the prompt: agent docs / README + a thin
+    structure digest. Public (not `_digest`) because `serve` needs it too —
+    the server has no local checkout, so a caller who wants a real `author`
+    call over A2A must compute this locally (where the checkout actually is)
+    and send the resulting string, not a repo path."""
     parts = []
     for name in facts["docs"]["agent_docs"] + (["README.md"] if not facts["docs"]["agent_docs"] else []):
         p = repo / name
@@ -77,8 +82,19 @@ def _digest(repo: Path, facts: dict, *, max_doc=14000) -> str:
 
 
 def build_authored(facts: dict, *, model="gemini-3.8-flash", exposure="internal",
-                   timeout=120) -> dict:
+                   digest: str | None = None, timeout=120) -> dict:
+    """`digest`: pass the repo-text digest explicitly when there's no local
+    checkout to read it from (e.g. `serve`, which only ever receives
+    facts.json + a digest string over A2A — never a repo path). Left as
+    `None` (the CLI's own default), this reads it from
+    `facts["_repo_path"]` locally, unchanged from before `serve` existed. A
+    repo_path that doesn't exist locally (or isn't a directory) degrades to
+    an empty digest rather than raising — an honest "less context available",
+    the same anti-fabrication posture the rest of this module already takes
+    for a missing fact, not a hard failure."""
     repo = Path(facts["_repo_path"])
+    if digest is None:
+        digest = build_digest(repo, facts) if repo.is_dir() else ""
     keys = list(AUTHORED_SECTIONS)
     section_brief = "\n".join(f"- {k}: {v}" for k, v in AUTHORED_SECTIONS.items())
     gap_flags = {
@@ -92,7 +108,7 @@ def build_authored(facts: dict, *, model="gemini-3.8-flash", exposure="internal"
 
     user = (
         f"FACTS:\n{json.dumps(facts, indent=1)[:20000]}\n\n"
-        f"REPO TEXT:\n{_digest(repo, facts)}\n\n"
+        f"REPO TEXT:\n{digest}\n\n"
         f"SECTIONS TO WRITE (name: mode + instruction):\n{section_brief}\n\n"
         f"GAP-FLAG per section when you can't write it truthfully:\n{json.dumps(gap_flags, indent=1)}"
     )

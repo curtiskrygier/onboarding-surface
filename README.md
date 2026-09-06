@@ -24,19 +24,21 @@ verifiable, or explicitly marked *authored, unverified*.
 | `extract/` | Step 1 — `facts.json` from a repo. Offline by default; `--github` adds an online adapter. |
 | `author/` | Step 2 — the one governed LLM call: `facts.json` → authored prose + classified landmine records. |
 | `render/` | Step 3 — `facts.json` (+ authored) → `README.md` / `ARCHITECTURE.md` / `CONTRIBUTING.md` (+ `MAINTAINER-NOTES.md` in `--exposure public`). |
-| `draw/` | §16b, cadence-only — `facts.json` → a structured architecture-sketch prompt → a sanitised, cached SVG, embedded by `render`. |
+| `draw/` | §16b/§16c — the architecture sketch (D2, deterministic, cadence-only) and repo-mark proposals (LLM, human-gated). |
 | `review/` | The HITL review page — read-only, no approve/reject gate. |
+| `serve/` | Step 5, §12 — the A2A wrapper: `author`/`render`/`draw`/`full` as remote skills. Stateless, repo-blind. |
 | `examples/` | The original hand-worked surface that pressure-tested the spec before any code existed. |
 
 Each module's own `README.md` has its CLI and what's verified so far.
 
 ## Status
 
-`extract` → `author` → `render` → `draw` → `review` all built and verified on
-real repos (a2ui-catalogue, maison, onboarding-surface itself). No A2A service
-wrapper or GitHub Action yet — see "Where it fits" below and
-`agentic-battle-testing/scripts/onboard.py`, which runs the pipeline end-to-end
-against an onboarded repo today.
+`extract` → `author` → `render` → `draw` → `review` → `serve` all built and
+verified on real repos (a2ui-catalogue, maison, onboarding-surface itself).
+`serve` is a real A2A service (`author`/`render`/`draw`/`full` skills) — see
+`serve/README.md`. No CI-formatter GitHub Action yet — see "Where it fits"
+below and `agentic-battle-testing/scripts/onboard.py`, which runs the pipeline
+end-to-end locally against an onboarded repo today.
 
 ## Where it fits
 
