@@ -1,0 +1,26 @@
+name: onboarding-surface
+
+# This repo dogfoods its own Action (docs/design.md's "Hosting/infra": "CI for
+# this repo dogfoods the Action on itself"). mode=check only -- no LLM key
+# configured for this repo's own CI yet, and mode=check never needs one.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.py'
+      - 'requirements*.txt'
+      - '.python-version'
+      - 'ARCHITECTURE.md'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: curtiskrygier/onboarding-surface@v1
+        with:
+          mode: check
