@@ -1,3 +1,5 @@
+<img src="assets/logo.svg" alt="" width="60">
+
 # onboarding-surface
 
 An agent that turns a repository into a **contributor onboarding surface** — the

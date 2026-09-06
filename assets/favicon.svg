@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="36 43 168 154" role="img" aria-label="onboarding-surface">
+  <rect x="60" y="67"  width="48"  height="16" rx="8" fill="#2563eb"/>
+  <rect x="60" y="97"  width="72"  height="16" rx="8" fill="#94a3b8"/>
+  <rect x="60" y="127" width="96"  height="16" rx="8" fill="#94a3b8"/>
+  <rect x="60" y="157" width="120" height="16" rx="8" fill="#94a3b8"/>
+</svg>
